@@ -15,6 +15,9 @@
 #include "lua_gears.h"
 #include "lib/lua_templates.h"
 #include <rime/algo/algebra.h>
+#include "component.h"
+#include "translator.h"
+
 using namespace rime;
 
 template<typename T>
@@ -42,6 +45,7 @@ namespace SegmentReg {
     return Segment(start_pos, end_pos);
   };
 
+
   string get_status(const T &t) {
     switch (t.status) {
     case T::kVoid: return "kVoid";
@@ -62,6 +66,7 @@ namespace SegmentReg {
     else if (r == "kConfirmed")
       t.status = T::kConfirmed;
   }
+  
 
   static const luaL_Reg funcs[] = {
     { "Segment", WRAP(make) },
@@ -70,7 +75,6 @@ namespace SegmentReg {
 
   static const luaL_Reg methods[] = {
     { "clear", WRAPMEM(T::Clear) },
-    { "close", WRAPMEM(T::Close) },
     { "reopen", WRAPMEM(T::Reopen) },
     { "has_tag", WRAPMEM(T::HasTag) },
     { "get_candidate_at", WRAPMEM(T::GetCandidateAt) },
@@ -219,6 +223,7 @@ namespace TranslationReg {
 
   static const luaL_Reg methods[] = {
     { "iter", raw_iter },
+	{ "exhausted", WRAPMEM(T::exhausted)},
     { NULL, NULL },
   };
 
@@ -603,6 +608,7 @@ namespace SchemaReg {
 
 namespace ConfigValueReg {
   typedef ConfigValue T;
+  typedef ConfigItem E;
 
   // an<T> make(){
   //  return New<T>();
@@ -610,7 +616,6 @@ namespace ConfigValueReg {
   an<T> make(string s){
     return New<T>(s);
   };
-
   
   optional<bool> get_bool(T &t) {
     bool v;
@@ -618,7 +623,6 @@ namespace ConfigValueReg {
       return v;
     else
       return {};
-      
   }
 
   optional<int> get_int(T &t) {
@@ -627,7 +631,6 @@ namespace ConfigValueReg {
       return v;
     else
       return optional<int>{};
-      
   }
 
   optional<double> get_double(T &t) {
@@ -645,11 +648,12 @@ namespace ConfigValueReg {
       return v;
     else
       return optional<string>{};
-  };
+  }
 
   bool set_string(T &t, const string &value) {
     return t.SetString( value);
-  };
+  }
+
   string type(T &t){
     switch (t.type()) {
     case T::kNull: return "kNull";
@@ -658,8 +662,12 @@ namespace ConfigValueReg {
     case T::kMap: return "kMap";
     }
     return "";
-    
   }
+
+  an<E> element(T &t){
+	    return (an<E>) &t ;
+  }
+
   static const luaL_Reg funcs[] = {
     {"ConfigValue", WRAP(make)},
     { NULL, NULL },
@@ -669,6 +677,9 @@ namespace ConfigValueReg {
     {"get_bool",WRAP(get_bool)},
     {"get_int",WRAP(get_int)},
     {"get_double",WRAP(get_double)},
+    {"set_bool", WRAPMEM(T::SetBool)},
+	{"set_int", WRAPMEM(T::SetInt)},
+	{"set_double", WRAPMEM(T::SetDouble)},
     {"get_string",WRAP(get_string)},
     {"set_string",WRAP(set_string)},
     { NULL, NULL },
@@ -677,6 +688,7 @@ namespace ConfigValueReg {
   static const luaL_Reg vars_get[] = {
     {"value",WRAP(get_string)},
     {"type",WRAP(type)},
+	{"element",WRAP(element)},
     { NULL, NULL },
   };
 
@@ -687,18 +699,10 @@ namespace ConfigValueReg {
 }
 namespace ConfigListReg {
   typedef ConfigList T;
+  typedef ConfigItem E;
 
   an<T> make(){
     return New<T>();
-  };
-  //   
-  bool append(T &t,  an<ConfigValue> l ){
-    an<ConfigItem> p=l;
-    return t.Append( l );
-  };
-  bool insert(T &t, size_t i, an<ConfigValue> l) {
-    an<ConfigItem> p=l;
-    return t.Insert(i, p );
   };
   
   string type(T &t){
@@ -709,9 +713,11 @@ namespace ConfigListReg {
     case T::kMap: return "kMap";
     }
     return "";
-    
   }
 
+  an<E> element(T &t){
+	    return (an<E>) &t ;
+  }
 
   static const luaL_Reg funcs[] = {
     {"ConfigList", WRAP(make)},
@@ -722,10 +728,8 @@ namespace ConfigListReg {
     {"get_at", WRAPMEM(T::GetAt)},
     {"get_value_at", WRAPMEM(T::GetValueAt)},
     {"set_at", WRAPMEM(T::SetAt)},
-    //{"append", WRAPMEM(T::Append)},
-    //{"insert", WRAPMEM(T::Insert)},
-    {"append", WRAP(append)},
-    {"insert", WRAP(insert)},
+    {"append", WRAPMEM(T::Append)},
+    {"insert", WRAPMEM(T::Insert)},
     {"clear", WRAPMEM(T::Clear)},
     {"empty", WRAPMEM(T::empty)},
     {"resize", WRAPMEM(T::Resize)},
@@ -735,6 +739,7 @@ namespace ConfigListReg {
   static const luaL_Reg vars_get[] = {
     {"size", WRAPMEM(T::size)},
     {"type",WRAP(type)},
+	{"element",WRAP(element)},
     { NULL, NULL },
   };
 
@@ -742,9 +747,16 @@ namespace ConfigListReg {
     { NULL, NULL },
   };
 }
-namespace ConfigItemReg {
-  typedef ConfigItem T;
-  
+
+
+namespace ConfigMapReg {
+  typedef ConfigMap T;
+  typedef ConfigItem E;
+
+  an<T> make(){
+    return New<T>();
+  }
+
   string type(T &t){
     switch (t.type()) {
     case T::kNull: return "kNull";
@@ -753,28 +765,82 @@ namespace ConfigItemReg {
     case T::kMap: return "kMap";
     }
     return "";
-    
   }
- ConfigValue* get_value(T &t){
+
+  size_t size(T &t){
+    size_t count=0;
+    for (auto it=t.begin(); it !=t.end();it++)
+      count++ ;
+    return count;
+  }
+
+  an<E> element(T &t){
+    return (an<E>) &t ;
+  }
+
+  static const luaL_Reg funcs[] = {
+    {"ConfigMap", WRAP(make)},
+    { NULL, NULL },
+  };
+
+  static const luaL_Reg methods[] = {
+    {"set", WRAPMEM(T::Set)},
+    {"get", WRAPMEM(T::Get)},
+    {"get_value", WRAPMEM(T::GetValue)},
+    {"has_key", WRAPMEM(T::HasKey)},
+    {"clear", WRAPMEM(T::Clear)},
+    {"empty", WRAPMEM(T::empty)},
+    { NULL, NULL },
+  };
+
+  static const luaL_Reg vars_get[] = {
+    {"size", WRAP(size)},
+    {"type",WRAP(type)},
+    {"element",WRAP(element)},
+  };
+
+  static const luaL_Reg vars_set[] = {
+    { NULL, NULL },
+  };
+}
+
+namespace ConfigItemReg {
+  typedef ConfigItem T;
+  typedef ConfigMap M;
+  typedef ConfigList L;
+  typedef ConfigValue V;
+
+  string type(T &t){
+    switch (t.type()) {
+    case T::kNull: return "kNull";
+    case T::kScalar: return "kScalar";
+    case T::kList: return "kList";
+    case T::kMap: return "kMap";
+    }
+    return "";
+  }
+
+  V* get_value(T &t){
     if (t.type() == T::kScalar)
-      return (ConfigValue *)(  &t);
+      return (V*)(  &t);
     else
       return nullptr ;
   }
-  ConfigList * get_list(T &t){
+
+  L* get_list(T &t){
     if (t.type() == T::kList)
-       return (ConfigList *) &t;
+       return (L*) &t;
     else
       return nullptr ;
-    //return {};
   }
-  ConfigMap * get_map(T &t){
+
+  M* get_map(T &t){
     if (t.type() == T::kMap)
-      return (ConfigMap *) &t;
+      return (M*) &t;
     else
-      //return {};
       return nullptr ;
   }
+
   static const luaL_Reg funcs[] = {
     { NULL, NULL },
   };
@@ -782,11 +848,13 @@ namespace ConfigItemReg {
   static const luaL_Reg methods[] = {
     {"get_value",WRAP(get_value)},
     {"get_list",WRAP(get_list)},
-    //  {"get_map",WRAP(get_map)},
+    {"get_map",WRAP(get_map)},
     { NULL, NULL },
   };
+
   static const luaL_Reg vars_get[] = {
     {"type",WRAP(type)},
+	{"empty",WRAPMEM(T::empty)},
     { NULL, NULL },
   };
 
@@ -795,11 +863,12 @@ namespace ConfigItemReg {
   };
   
 }
+
 namespace ProjectionReg{
   typedef Projection T;
   an<T> make(){
     return New<T>();
-  };
+  }
   
   
   string apply(T &t, const string &s){
@@ -820,6 +889,7 @@ namespace ProjectionReg{
     {"apply",WRAP(apply)},
     { NULL, NULL },
   };
+
   static const luaL_Reg vars_get[] = {
     { NULL, NULL },
   };
@@ -829,6 +899,7 @@ namespace ProjectionReg{
   };
   
 }
+
 namespace ConfigReg {
   typedef Config T;
 
@@ -838,7 +909,7 @@ namespace ConfigReg {
       return v;
     else
       return {};
-  };
+  }
 
   optional<int> get_int(T &t, const string &path) {
     int v;
@@ -846,7 +917,7 @@ namespace ConfigReg {
       return v;
     else
       return optional<int>{};
-  };
+  }
 
   optional<double> get_double(T &t, const string &path) {
     double v;
@@ -854,7 +925,7 @@ namespace ConfigReg {
       return v;
     else
       return optional<double>{};
-  };
+  }
 
   optional<string> get_string(T &t, const string &path) {
     string v;
@@ -862,11 +933,33 @@ namespace ConfigReg {
       return v;
     else
       return optional<string>{};
-  };
-
+  }
+  
+  // GetString : overload function
   bool set_string(T &t, const string &path, const string &value) {
     return t.SetString(path, value);
-  };
+  }
+
+  // GetItem SetItem : overload function
+  an<ConfigItem> get_item(T &t, const string & path){
+    return t.GetItem(path);
+  }
+
+  bool set_item(T &t ,const string &path, an<ConfigItem> item){
+    return t.SetItem(path,item);
+  }
+
+  bool set_value(T &t, const string &path,  an<ConfigValue>  value) {
+    return t.SetItem(path, value);
+  }
+
+  bool set_list(T &t, const string &path,  an<ConfigList>  value) {
+    return t.SetItem(path, value);
+  }
+
+  bool set_map(T &t, const string &path, an<ConfigMap> value) {
+    return t.SetItem(path, value);
+  }
 
   static const luaL_Reg funcs[] = {
     { NULL, NULL },
@@ -882,22 +975,35 @@ namespace ConfigReg {
     { "is_value", WRAPMEM(T::IsValue) },
     { "is_list", WRAPMEM(T::IsList) },
     { "is_map", WRAPMEM(T::IsMap) },
+
     { "get_bool", WRAP(get_bool) },
     { "get_int", WRAP(get_int) },
     { "get_double", WRAP(get_double) },
     { "get_string", WRAP(get_string) },
-    { "get_list_size", WRAPMEM(T::GetListSize) },
-    { "get_list", WRAPMEM(T::GetList) },
+
+    { "set_bool", WRAPMEM(T::SetBool) },
+    { "set_int", WRAPMEM(T::SetInt) },
+    { "set_double", WRAPMEM(T::SetDouble) },
+    { "set_string", WRAP(set_string) }, // redefine overload function 
+
+    { "get_item", WRAP(get_item) }, // redefine overload function 
+    { "set_item", WRAP(set_item) }, // create new function 
 
     //an<ConfigItem> GetItem(const string& path);
     //an<ConfigValue> GetValue(const string& path);
     //RIME_API an<ConfigList> GetList(const string& path);
     //RIME_API an<ConfigMap> GetMap(const string& path);
 
-    { "set_bool", WRAPMEM(T::SetBool) },
-    { "set_int", WRAPMEM(T::SetInt) },
-    { "set_double", WRAPMEM(T::SetDouble) },
-    { "set_string", WRAP(set_string) },
+    { "get_value", WRAPMEM(T::GetValue) },
+    { "get_list", WRAPMEM(T::GetList) },
+    { "get_map", WRAPMEM(T::GetMap) },
+
+    { "set_value", WRAP(set_value) }, // create new function 
+    { "set_list", WRAP(set_list) }, // create new function 
+    { "set_map", WRAP(set_map)}, // create new function 
+
+    { "get_list_size", WRAPMEM(T::GetListSize) },
+
     //RIME_API bool SetItem(const string& path, an<ConfigItem> item);
     { NULL, NULL },
   };
@@ -1173,8 +1279,9 @@ void types_init(lua_State *L) {
   EXPORT(SchemaReg, L);
   EXPORT(ConfigReg, L);
   EXPORT(ConfigItemReg, L);
-  EXPORT(ConfigListReg, L);
   EXPORT(ConfigValueReg, L);
+  EXPORT(ConfigListReg, L);
+  EXPORT(ConfigMapReg, L);
   EXPORT(ProjectionReg, L);
   EXPORT(NotifierReg, L);
   EXPORT(OptionUpdateNotifierReg, L);
@@ -1182,6 +1289,20 @@ void types_init(lua_State *L) {
   EXPORT(KeyEventNotifierReg, L);
   EXPORT(ConnectionReg, L);
   EXPORT(SwitcherReg, L);
+  // "lua/src/component.h" 
+  EXPORT(TicketReg,L);
+  EXPORT(ComponentReg, L);
+  EXPORT(UnionTranslationReg, L);
+  EXPORT(FifoTranslationReg, L);
+  EXPORT(MergedTranslationReg, L);
+  //EXPORT(DictionaryReg, L);
+  //  lua/src/translator.h"
+  EXPORT(MemoryReg, L);
+  EXPORT(TranslatorReg, L);
+  EXPORT(TranslatorOptionsReg, L);
+  EXPORT(TableTranslatorReg, L);
+  EXPORT(ScriptTranslatorReg, L);
+
   LogReg::init(L);
   RimeApiReg::init(L);
 }

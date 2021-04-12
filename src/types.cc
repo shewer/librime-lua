@@ -878,7 +878,7 @@ namespace ConfigItemReg {
 
 }
 
-namespace ProjectionReg{
+namespace ProjectionReg {
   typedef Projection T;
   an<T> make(){
     return New<T>();

@@ -409,14 +409,11 @@ namespace EngineReg {
     { "schema", WRAPMEM(T::schema) },
     { "context", WRAPMEM(T::context) },
     { "active_engine", WRAPMEM(T::active_engine) },
-    { "max_level", WRAP(get_max_level)},
-    { "count_level", WRAP(get_count_level)},
     { NULL, NULL },
   };
 
   static const luaL_Reg vars_set[] = {
     { "active_engine", WRAPMEM(T::set_active_engine) },
-    { "max_level", WRAP(set_max_level)},
     { NULL, NULL },
   };
 }

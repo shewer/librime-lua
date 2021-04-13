@@ -386,42 +386,7 @@ namespace KeyEventReg {
 
 namespace EngineReg {
   typedef Engine T;
-  static int max_level=30;
-  static int count_level=0;
-  int get_count_level(T &t) {
-    return count_level;
-  }
-  int get_max_level(T &t) {
-    return max_level;
-  }
-  void set_max_level(T &t, int num) {
-    max_level=  (num <= 1 ) ? 1 :  num ;
-  }
-  bool process_key( T &t, string  repr ) {
-    KeyEvent key;
-    if (!key.Parse(repr)) {
-      LOG(ERROR) << "error parsing input: '" << repr << "'";
-      return False;
-    }
-    if ( max_level <= count_level++ ){
-      LOG(ERROR) << "process_key over max_level: '"<< max_level << "'";
-      count_level=0;
-      return False;
-    }
-    bool result= t.ProcessKey(key) ;
-    count_level=0 ; 
-    return result; 
-  }
 
-  bool process_keys( T &t, string key_sequence){
-    KeySequence keys;
-    if (!keys.Parse(key_sequence) ) {
-      LOG(ERROR) << "error parsing input: '" << key_sequence << "'";
-      return False;
-    }
-    for (const KeyEvent& key : keys)  t.ProcessKey(key);  
-    return True;
-  }
 
   static const luaL_Reg funcs[] = {
     { NULL, NULL },
@@ -429,8 +394,6 @@ namespace EngineReg {
 
   static const luaL_Reg methods[] = {
     { "commit_text", WRAPMEM(T::CommitText) },
-    { "process_key", WRAP(process_key) },
-    { "process_keys", WRAP(process_keys) },
     { NULL, NULL },
   };
 

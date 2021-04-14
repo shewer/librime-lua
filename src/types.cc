@@ -1,4 +1,3 @@
-#include <rime/candidate.h>
 #include <rime/translation.h>
 #include <rime/segmentation.h>
 #include <rime/menu.h>
@@ -9,6 +8,21 @@
 #include <rime/config/config_component.h>
 #include <rime/config/config_types.h>
 #include <rime/gear/translator_commons.h>
+// test
+#include <rime/gear/echo_translator.h>
+#include <rime/gear/script_translator.h>
+#include <rime/gear/switch_translator.h>
+#include <boost/algorithm/string.hpp>
+#include <boost/range/adaptor/reversed.hpp>
+#include <rime/gear/schema_list_translator.h>
+#include <rime/dict/dictionary.h>
+#include <rime/dict/user_dictionary.h>
+#include <rime/gear/charset_filter.h>
+#include <rime/gear/poet.h>
+#include <rime/gear/table_translator.h>
+#include <rime/gear/translator_commons.h>
+#include <rime/gear/unity_table_encoder.h>
+// 
 #include <rime/dict/reverse_lookup_dictionary.h>
 #include <rime/key_event.h>
 #include <rime/switcher.h>
@@ -234,6 +248,7 @@ namespace TranslationReg {
   };
 }
 
+
 namespace ReverseDbReg {
   typedef ReverseDb T;
 
@@ -401,6 +416,42 @@ namespace EngineReg {
   static void apply_schema(T *engine, Schema &schema){
     engine->ApplySchema( &schema);
   }
+  bool process_key( T &t, const KeyEvent &keyevent){ 
+	static unsigned int count_level=0;
+	/*
+    KeyEvent keyevent;
+    if (!keyevent.Parse(key) ) {
+      LOG(ERROR) << "error parsing input: '" << key<< "'";
+      return False;
+    }
+	*/
+	if (count_level >0 ) {
+		count_level=0;
+		return False ;
+	}
+	count_level++;
+    bool res= t.ProcessKey(keyevent) ;
+	count_level=0;
+    return res;
+  }
+  bool process_keys( T &t, const string &key_sequence){ 
+	static unsigned int count_level=0;
+	
+    KeySequence keys;
+    if (!keys.Parse(key_sequence) ) {
+      LOG(ERROR) << "error parsing input: '" << key_sequence << "'";
+      return False;
+    }
+	if (count_level >0 ) {
+		count_level=0;
+		return False ;
+	}
+	count_level++;
+    for (const KeyEvent& key : keys)  process_key(t,key) ;
+	count_level=0;
+    return True;
+  }
+
   static const luaL_Reg funcs[] = {
     { NULL, NULL },
   };
@@ -408,6 +459,7 @@ namespace EngineReg {
   static const luaL_Reg methods[] = {
     { "commit_text", WRAPMEM(T::CommitText) },
     { "apply_schema", WRAP(apply_schema) },
+    { "process_keys", WRAP(process_keys) },
     { NULL, NULL },
   };
 

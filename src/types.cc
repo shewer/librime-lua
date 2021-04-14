@@ -12,6 +12,7 @@
 #include <rime/dict/reverse_lookup_dictionary.h>
 #include <rime/key_event.h>
 #include <rime/switcher.h>
+#include "translator.h"
 #include "lua_gears.h"
 #include "lib/lua_templates.h"
 #include <rime/algo/algebra.h>
@@ -42,7 +43,6 @@ namespace SegmentReg {
   T make(int start_pos, int end_pos) {
     return Segment(start_pos, end_pos);
   };
-
 
   string get_status(const T &t) {
     switch (t.status) {
@@ -1344,6 +1344,14 @@ void types_init(lua_State *L) {
   EXPORT(KeyEventNotifierReg, L);
   EXPORT(ConnectionReg, L);
   EXPORT(SwitcherReg, L);
+  // lua/src/traslator.h
+  EXPORT(TicketReg , L);
+  EXPORT(TranslatorReg , L);
+  EXPORT(TranslatorOptionsReg , L);
+  EXPORT(MemoryReg , L);
+  EXPORT(TableTranslatorReg, L);
+  EXPORT(ScriptTranslatorReg, L);
+
 
   LogReg::init(L);
   RimeApiReg::init(L);

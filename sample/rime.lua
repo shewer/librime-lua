@@ -34,7 +34,39 @@ librime-lua 样例
 配方文件中的引用方法为：`...@foo`。
 
 --]]
+-- ConfigReg   get(path)  set(path,value)
+function _config_set(config,path,value)
 
+  -- check  value type   bool  number  string  to ConfigValue
+  if type(value) ~= "userdata" and type(value) ~= "table" then
+    value = ConfigValue( tostring(value) )
+  end
+
+  if type(value) == "userdata" then
+    config:set_item(path, value.element)
+    return true
+  end
+  return false
+end
+
+
+function _config_get(config,path)
+  local o =config:get_item(path)
+  if not o then return end
+  -- ConfigValue  types: bool  number  string
+  -- conv_value( ConfigValue )
+  local function conv_value(cv)
+    local v = cv:get_bool()
+    if v == nil then
+      return tonumber(cv.value) or cv.value
+    end
+    return cv.value
+  end
+  local otype = o.type
+  return ( otype == "kList" and config:get_list(path) ) or
+         ( otype == "kMap" and config:get_map(path) ) or
+         ( otype == "kScalar" and conv_value( config:get_value(path) ) )
+end
 
 -- I. translators:
 

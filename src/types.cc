@@ -729,6 +729,7 @@ namespace ConfigListReg {
     return t;
   }
 
+
   static const luaL_Reg funcs[] = {
     {"ConfigList", WRAP(make)},
     { NULL, NULL },
@@ -963,6 +964,49 @@ namespace ConfigReg {
     return t.SetItem(path, value);
   }
 
+  int raw_get(lua_State *L){
+    Lua *lua = Lua::from_state(L);
+    int n = lua_gettop(L);
+    if (n<2) {
+      LOG(ERROR) << "Config:get(path) argemnts need #2 ";
+      return 0;
+    }
+    lua_getglobal(L,"_config_get"); // config , path , func
+    lua_insert(L, 1); // func , obj , path
+    int status = lua_pcall(L,2,1,0); //  _config_get(config, path)
+    if (status != LUA_OK) {
+      std::string e = lua_tostring(L, -1);
+      lua_pop(L, 1);
+      LOG(ERROR)  << "lua_pcall error :(" << status << "): " << e << "\n" ;
+      return 0;
+    }
+    return 1;
+  }
+
+  int raw_set(lua_State *L){
+    Lua *lua = Lua::from_state(L);
+    int n = lua_gettop(L);
+    if (n<3)
+      return 0;
+    try {
+      lua_getglobal(L,"_config_set"); // config , path , obj , func
+      lua_insert(L, 1); // func , config, path , obj
+      lua_getglobal(L,"tostring");
+      lua_insert(L, -2) ;
+      lua_pcall(L, 1, 1, 0) ; // tostring( data)
+      lua_getglobal(L, "ConfigValue");
+      lua_insert(L, -2);
+      lua_pcall(L, 1, 1, 0);  // ConfigValue(string)
+      lua_pcall(L, 3, 0, 0); //  func( config , path obj )
+      return 1;
+    }
+    catch(const std::exception) {
+      LOG(ERROR)<<  "raw_sat error " ;
+      return 0;
+    }
+
+  }
+
   static const luaL_Reg funcs[] = {
     { NULL, NULL },
   };
@@ -1005,6 +1049,8 @@ namespace ConfigReg {
     { "set_map", WRAP(set_map)}, // create new function
 
     { "get_list_size", WRAPMEM(T::GetListSize) },
+    { "get" , raw_get },
+    { "set" , raw_set },
 
     //RIME_API bool SetItem(const string& path, an<ConfigItem> item);
     { NULL, NULL },

@@ -36,38 +36,33 @@ librime-lua 样例
 --]]
 -- ConfigReg   get(path)  set(path,value)
 function _config_set(config,path,value)
-
-  -- check  value type   bool  number  string  to ConfigValue
-  if type(value) ~= "userdata" and type(value) ~= "table" then
-    value = ConfigValue( tostring(value) )
+  local tp= type(value)
+  if not (tp == "number"  or  tp == "boolean"  or tp == "string" or  value.element ) then
+    return false
   end
 
-  if type(value) == "userdata" then
+  local item =config:get_item(path)
+  if item  and  not value.element  and   item.type == "kSarlal"   then
+    item:set(value)
+  end
+  -- value : ConfigValue ConfigList ConfigMap   reset path
+  if value.element then
+    log.warring(" overwrite ConfigItem : " .. path .. ": " ..  tostring(value) )
     config:set_item(path, value.element)
-    return true
   end
-  return false
 end
-
 
 function _config_get(config,path)
-  local o =config:get_item(path)
+  local o = config:get_item(path)
   if not o then return end
-  -- ConfigValue  types: bool  number  string
-  -- conv_value( ConfigValue )
-  local function conv_value(cv)
-    local v = cv:get_bool()
-    if v == nil then
-      return tonumber(cv.value) or cv.value
-    end
-    return cv.value
-  end
   local otype = o.type
-  return ( otype == "kList" and config:get_list(path) ) or
-         ( otype == "kMap" and config:get_map(path) ) or
-         ( otype == "kScalar" and conv_value( config:get_value(path) ) )
+  if otype== "kScalar" then
+    return  config:get_value(path):get()
+  end
+  return ( otype == "kList" and  obj:get_list(path) ) or
+         ( otype == "kMap" and obj:get_map(path) ) or
+         ( otype == "kScalar" and conv_value( obj:get_value(path) ) )
 end
-
 -- I. translators:
 
 -- date_translator: 将 `date` 翻译为当前日期

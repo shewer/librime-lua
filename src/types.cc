@@ -326,7 +326,7 @@ namespace SegmentationReg {
 
 namespace MenuReg {
   typedef Menu T;
-    
+
   an<T> make() {
     return New<T>();
   }
@@ -543,7 +543,7 @@ namespace CompositionReg {
   Segmentation *toSegmentation(T &t) {
     return dynamic_cast<Segmentation *>(&t);
   }
-  
+
   Segment &back(T &t) {
     return t.back();
   }
@@ -628,42 +628,33 @@ namespace ConfigValueReg {
     return New<T>(s);
   };
 
-  int raw_make(lua_State *L){
-    Lua *lua = Lua::from_state(L);
-    int n = lua_gettop(L);
-    if (n<1) {
-      LOG(ERROR) << "ConfigValue:get() argemnts need #1 (self) ";
-      return 0;
-    }
+#define LUA_PCALL(lstate, args, res, r) \
+  if ( LUA_OK != lua_pcall( (lstate), ( args ), (res), (r) ) )\
+  throw std::runtime_error( lua_tostring( (lstate) , -1) );
 
-    int status;
-    // checking type  string  boolean  number
-    if (!lua_isstring(L,1)){ 
-      if ( ! lua_isnumber(L,1) or ! lua_isboolean(L, 1)) {
-        std::string e =  lua_tostring(L, 1);
-        LOG(ERROR) << "ConfigValue type con't by ( " << e << " )" ;
-        return 0;
-      }
-      lua_getglobal(L, "tostring");
-      lua_insert(L , 1);
-      status = lua_pcall(L, n, 1, 0);
-      if ( status != LUA_OK ){
-        std::string e = lua_tostring(L, -1);
-        LOG(ERROR)  << "lua_pcall error :(" << status << "): " << e  ;
-        return 0;
-      }
+  int raw_make(lua_State *L){
+    try {
+      if (1 >  lua_gettop(L))
+        throw std::runtime_error(" ConfigValue(args) args is empty ");
+
+      // checking type  string  boolean  number
+      int vtype= lua_type(L, 1);
+      if (vtype != LUA_TBOOLEAN && vtype != LUA_TSTRING && vtype != LUA_TNUMBER )
+        throw std::runtime_error(" ConfigValue(value) for instance method ");
+
+      lua_getglobal(L, "tostring"); // value ...  tostring
+      lua_insert(L , 1);  // tostring value ...
+      LUA_PCALL(L, lua_gettop(L)-1, 1, 0); //  string
+      // create instance // string
+      lua_pushcfunction(L, WRAP(make)); // string make
+      lua_insert(L , 1); // make string
+      LUA_PCALL(L, 1, 1, 0); // obj res
+      return 1;
     }
-    // create instance  
-    lua_pushcfunction(L, WRAP(make));
-    lua_insert(L , 1);
-    n= lua_gettop(L);
-    status = lua_pcall(L, n, 1, 0);
-    if ( status != LUA_OK ){
-      std::string e = lua_tostring(L, -1);
-      LOG(ERROR)  << "lua_pcall error :(" << status << "): " << e  ;
+    catch(std::runtime_error& e){
+      LOG(ERROR) <<  e.what() ;
       return 0;
     }
-    return 1;
   }
 
   optional<bool> get_bool(T &t) {
@@ -717,66 +708,57 @@ namespace ConfigValueReg {
   }
 
   int raw_get(lua_State *L){
-    Lua *lua = Lua::from_state(L);
-    int n = lua_gettop(L);
-    if (n<1) {
-      LOG(ERROR) << "ConfigValue:get() argemnts need #1 (self) ";
+    try {
+      if (1 >  lua_gettop(L))
+        throw std::runtime_error("ConfigValue:get() for instance method ");
+
+      for (int i=1; i<= lua_gettop(L) ; i++)
+          std::cout  << i <<": " << lua_typename(L,lua_type(L,i)) ;
+      std::cout << "\n";
+      lua_pushcfunction(L, WRAP(get_bool) ); // string to boolean "true" "false"
+      lua_pushvalue(L, 1); // obj get_bool obj
+      LUA_PCALL(L, 1, 1, 0); // obj res
+      if ( lua_isboolean(L,-1) ) return 1;  // return bool
+
+      lua_pushcfunction(L, WRAP(get_string)); // obj get_string
+      lua_insert(L, 1); // get_string obj
+      LUA_PCALL(L, lua_gettop(L) - 1, 1, 0);
+      if( !lua_isnumber(L,-1)) return 1;  //  return string
+
+      lua_getglobal(L, "tonumber"); // string  tonumber
+      lua_pushvalue(L, -2); // tonumber string
+      LUA_PCALL(L, 1, 1, 0);
+      return 1; // return number
+    }
+    catch(std::runtime_error& e){
+      LOG(ERROR) <<  e.what() ;
       return 0;
     }
-    int status;
-    lua_pushcfunction(L, WRAP(get_bool) ); // string to boolean "true" "false"
-    lua_pushvalue(L, 1); // obj func obj 
-    status= lua_pcall(L, 1, 1, 0);
-    if ( LUA_OK != status) 
-      return 0;
-
-    if (  lua_isboolean(L,-1) ) 
-      return 1;  // return bool 
-
-    lua_pushcfunction(L, WRAP(get_string));
-    lua_pushvalue(L,1); // obj func obj
-    status= lua_pcall(L, 1, 1, 0);  // obj string
-    if ( LUA_OK != status) 
-      return 0;
-
-    if( lua_isnumber(L,-1)) {
-      lua_getglobal(L, "tonumber"); 
-      lua_pushvalue(L, -2); // obj string func string
-      status= lua_pcall(L, 1, 1, 0); // obj string number
-      if ( LUA_OK != status) 
-        return 0;
-
-      return 1; // return number 
-    }
-    return 1;  // return string
 
   }
 
   int raw_set(lua_State *L){
-    Lua *lua = Lua::from_state(L);
-    int n = lua_gettop(L);
-    if (n<2)
-      return 0;
-    
-    int status;
-    lua_getglobal(L, "tostring");
-    lua_insert(L, -1);   // obj func value
-    status= lua_pcall(L, 1, 1, 0); 
-    if ( LUA_OK != status) {
-      lua_pushboolean(L, false);
-      return 1;
-    }
-    lua_pushcfunction(L, WRAP(set_string) );
-    lua_insert(L,1);
-    status= lua_pcall(L, 2, 1, 0); 
-    if ( LUA_OK != status) {
-      lua_pushboolean(L, false);
-      return 1;
-    }
-    return 1 ;
-  }
-  
+    try {
+      if (2 >  lua_gettop(L))
+        throw std::runtime_error("ConfigValue:set(value) for instance method ");
+      int vtype= lua_type(L, -1);
+      if (vtype != LUA_TBOOLEAN && vtype != LUA_TSTRING && vtype != LUA_TNUMBER )
+        throw std::runtime_error("ConfigValue:set(value) for instance method ");
 
+      lua_getglobal(L, "tostring"); // obj value ... tostring
+      lua_insert(L, 2);   // obj  tostring value ...
+      LUA_PCALL(L, (lua_gettop(L) - 2), 1, 0); // obj string
+
+      lua_pushcfunction(L, WRAP(set_string) ); // obj string set_string
+      lua_insert(L,1); // set_string obj string
+      LUA_PCALL(L, 2, 1, 0);  // boolean
+      return 1 ; // return  bool
+    }
+    catch(std::runtime_error& e){
+      LOG(ERROR) <<  e.what() ;
+      return 0;
+    }
+  }
 
   static const luaL_Reg funcs[] = {
     {"ConfigValue", raw_make},
@@ -1067,38 +1049,35 @@ namespace ConfigReg {
   }
 
   int raw_get(lua_State *L){
-    Lua *lua = Lua::from_state(L);
-    int n = lua_gettop(L);
-    if (n<2) {
-      LOG(ERROR) << "Config:get(path) argemnts need #2 ";
+    try {
+      if (2 >  lua_gettop(L))
+        throw std::runtime_error("ConfigValue:get() for instance method ");
+
+      lua_getglobal(L,"_config_get"); // config , path , func
+      lua_insert(L, 1); // func , obj , path
+      LUA_PCALL(L, lua_gettop(L) -1 , 1, 0) ;//  func( config , path obj )
+      return 1;
+    }
+    catch(std::runtime_error& e) {
+      LOG(ERROR) <<  e.what() ;
       return 0;
     }
-    lua_getglobal(L,"_config_get"); // config , path , func
-    lua_insert(L, 1); // func , obj , path
-    int status = lua_pcall(L,n,1,0); //  _config_get(config, path)
-    if (status != LUA_OK) {
-      std::string e = lua_tostring(L, -1);
-      LOG(ERROR)  << "lua_pcall error :(" << status << "): " << e << "\n" ;
-      return 0;
-    }
-    return 1;
   }
 
   int raw_set(lua_State *L){
-    Lua *lua = Lua::from_state(L);
-    int n = lua_gettop(L);
-    if (n<3)
-      return 0;
+    try {
+      if (3 >  lua_gettop(L))
+        throw std::runtime_error("ConfigValue:get() for instance method ");
 
-    lua_getglobal(L,"_config_set"); // config , path , obj , func
-    lua_insert(L, 1); // func , config, path , obj
-    int status=lua_pcall(L, n, 0, 0); //  func( config , path obj )
-    if ( LUA_OK != status ) {
-      std::string e = lua_tostring(L, -1);
-      LOG(ERROR)  << "lua_pcall error :(" << status << "): " << e << "\n" ;
+      lua_getglobal(L,"_config_set"); // config , path , obj , func
+      lua_insert(L, 1); // func , config, path , obj
+      LUA_PCALL(L, lua_gettop(L) -1 , 0, 0) ;//  func( config , path obj )
+      return 1;
+    }
+    catch(std::runtime_error& e) {
+      LOG(ERROR) <<  e.what() ;
       return 0;
     }
-    return 1;
   }
 
   static const luaL_Reg funcs[] = {
@@ -1560,7 +1539,7 @@ namespace MemoryReg {
 namespace PhraseReg {
   typedef Phrase T;
 
-  an<T> make(MemoryReg::LuaMemory& memory, 
+  an<T> make(MemoryReg::LuaMemory& memory,
     const string& type,
     size_t start,
     size_t end,

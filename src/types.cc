@@ -1027,11 +1027,11 @@ namespace ConfigReg {
     return t.SetString(path, value);
   }
 
-  // GetItem SetItem : overload function
   an<ConfigItem> get_item(T &t, const string & path){
     return t.GetItem(path);
   }
 
+  // GetItem SetItem : overload function
   bool set_item(T &t ,const string &path, an<ConfigItem> item){
     return t.SetItem(path,item);
   }

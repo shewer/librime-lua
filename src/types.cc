@@ -30,6 +30,7 @@
 #include <rime/dict/user_dictionary.h>
 #include <rime/switcher.h>
 #include "translator.h"
+#include <rime/component.h>
 #include "lua_gears.h"
 #include "lib/lua_templates.h"
 
@@ -681,6 +682,35 @@ namespace ConfigValueReg {
     return New<T>(s);
   };
 
+#define LUA_PCALL(lstate, args, res, r) \
+  if ( LUA_OK != lua_pcall( (lstate), ( args ), (res), (r) ) )\
+  throw std::runtime_error( lua_tostring( (lstate) , -1) );
+
+  int raw_make(lua_State *L){
+    try {
+      if (1 >  lua_gettop(L))
+        throw std::runtime_error(" ConfigValue(args) args is empty ");
+
+      // checking type  string  boolean  number
+      int vtype= lua_type(L, 1);
+      if (vtype != LUA_TBOOLEAN && vtype != LUA_TSTRING && vtype != LUA_TNUMBER )
+        throw std::runtime_error(" ConfigValue(value) for instance method ");
+
+      lua_getglobal(L, "tostring"); // value ...  tostring
+      lua_insert(L , 1);  // tostring value ...
+      LUA_PCALL(L, lua_gettop(L)-1, 1, 0); //  string
+      // create instance // string
+      lua_pushcfunction(L, WRAP(make)); // string make
+      lua_insert(L , 1); // make string
+      LUA_PCALL(L, 1, 1, 0); // obj res
+      return 1;
+    }
+    catch(std::runtime_error& e){
+      LOG(ERROR) <<  e.what() ;
+      return 0;
+    }
+  }
+
   optional<bool> get_bool(T &t) {
     bool v;
     if (t.GetBool( &v))
@@ -731,8 +761,61 @@ namespace ConfigValueReg {
     return t ;
   }
 
+  int raw_get(lua_State *L){
+    try {
+      if (1 >  lua_gettop(L))
+        throw std::runtime_error("ConfigValue:get() for instance method ");
+
+      for (int i=1; i<= lua_gettop(L) ; i++)
+          std::cout  << i <<": " << lua_typename(L,lua_type(L,i)) ;
+      std::cout << "\n";
+      lua_pushcfunction(L, WRAP(get_bool) ); // string to boolean "true" "false"
+      lua_pushvalue(L, 1); // obj get_bool obj
+      LUA_PCALL(L, 1, 1, 0); // obj res
+      if ( lua_isboolean(L,-1) ) return 1;  // return bool
+
+      lua_pushcfunction(L, WRAP(get_string)); // obj get_string
+      lua_insert(L, 1); // get_string obj
+      LUA_PCALL(L, lua_gettop(L) - 1, 1, 0);
+      if( !lua_isnumber(L,-1)) return 1;  //  return string
+
+      lua_getglobal(L, "tonumber"); // string  tonumber
+      lua_pushvalue(L, -2); // tonumber string
+      LUA_PCALL(L, 1, 1, 0);
+      return 1; // return number
+    }
+    catch(std::runtime_error& e){
+      LOG(ERROR) <<  e.what() ;
+      return 0;
+    }
+
+  }
+
+  int raw_set(lua_State *L){
+    try {
+      if (2 >  lua_gettop(L))
+        throw std::runtime_error("ConfigValue:set(value) for instance method ");
+      int vtype= lua_type(L, -1);
+      if (vtype != LUA_TBOOLEAN && vtype != LUA_TSTRING && vtype != LUA_TNUMBER )
+        throw std::runtime_error("ConfigValue:set(value) for instance method ");
+
+      lua_getglobal(L, "tostring"); // obj value ... tostring
+      lua_insert(L, 2);   // obj  tostring value ...
+      LUA_PCALL(L, (lua_gettop(L) - 2), 1, 0); // obj string
+
+      lua_pushcfunction(L, WRAP(set_string) ); // obj string set_string
+      lua_insert(L,1); // set_string obj string
+      LUA_PCALL(L, 2, 1, 0);  // boolean
+      return 1 ; // return  bool
+    }
+    catch(std::runtime_error& e){
+      LOG(ERROR) <<  e.what() ;
+      return 0;
+    }
+  }
+
   static const luaL_Reg funcs[] = {
-    {"ConfigValue", WRAP(make)},
+    {"ConfigValue", raw_make},
     { NULL, NULL },
   };
 
@@ -745,18 +828,20 @@ namespace ConfigValueReg {
     {"set_double", WRAPMEM(T::SetDouble)},
     {"get_string",WRAP(get_string)},
     {"set_string",WRAP(set_string)},
+    {"get", raw_get},
+    {"set", raw_set},
     { NULL, NULL },
   };
 
   static const luaL_Reg vars_get[] = {
-    {"value",WRAP(get_string)},
+    {"value", WRAP(get_string)},
     {"type",WRAP(type)},
     {"element",WRAP(element)},
     { NULL, NULL },
   };
 
   static const luaL_Reg vars_set[] = {
-    {"value",WRAP(set_string)},
+    {"value", WRAP(set_string)},
     { NULL, NULL },
   };
 }
@@ -781,6 +866,7 @@ namespace ConfigListReg {
   an<E> element(an<T> t){
     return t;
   }
+
 
   static const luaL_Reg funcs[] = {
     {"ConfigList", WRAP(make)},
@@ -995,11 +1081,11 @@ namespace ConfigReg {
     return t.SetString(path, value);
   }
 
-  // GetItem SetItem : overload function
   an<ConfigItem> get_item(T &t, const string & path){
     return t.GetItem(path);
   }
 
+  // GetItem SetItem : overload function
   bool set_item(T &t ,const string &path, an<ConfigItem> item){
     return t.SetItem(path,item);
   }
@@ -1014,6 +1100,38 @@ namespace ConfigReg {
 
   bool set_map(T &t, const string &path, an<ConfigMap> value) {
     return t.SetItem(path, value);
+  }
+
+  int raw_get(lua_State *L){
+    try {
+      if (2 >  lua_gettop(L))
+        throw std::runtime_error("ConfigValue:get() for instance method ");
+
+      lua_getglobal(L,"_config_get"); // config , path , func
+      lua_insert(L, 1); // func , obj , path
+      LUA_PCALL(L, lua_gettop(L) -1 , 1, 0) ;//  func( config , path obj )
+      return 1;
+    }
+    catch(std::runtime_error& e) {
+      LOG(ERROR) <<  e.what() ;
+      return 0;
+    }
+  }
+
+  int raw_set(lua_State *L){
+    try {
+      if (3 >  lua_gettop(L))
+        throw std::runtime_error("ConfigValue:get() for instance method ");
+
+      lua_getglobal(L,"_config_set"); // config , path , obj , func
+      lua_insert(L, 1); // func , config, path , obj
+      LUA_PCALL(L, lua_gettop(L) -1 , 0, 0) ;//  func( config , path obj )
+      return 1;
+    }
+    catch(std::runtime_error& e) {
+      LOG(ERROR) <<  e.what() ;
+      return 0;
+    }
   }
 
   static const luaL_Reg funcs[] = {
@@ -1058,6 +1176,8 @@ namespace ConfigReg {
     { "set_map", WRAP(set_map)}, // create new function
 
     { "get_list_size", WRAPMEM(T::GetListSize) },
+    { "get" , raw_get },
+    { "set" , raw_set },
 
     //RIME_API bool SetItem(const string& path, an<ConfigItem> item);
     { NULL, NULL },
@@ -1473,7 +1593,7 @@ namespace MemoryReg {
 namespace PhraseReg {
   typedef Phrase T;
 
-  an<T> make(MemoryReg::LuaMemory& memory, 
+  an<T> make(MemoryReg::LuaMemory& memory,
     const string& type,
     size_t start,
     size_t end,
@@ -1695,16 +1815,22 @@ namespace TicketReg {
   };
 }
 
-namespace TranslatorReg {
-  typedef Translator T;
+namespace ProcessorReg {
+  typedef Processor T;
 
+  an<T> make(const Ticket &ticket){
+    if ( auto c = T::Require(ticket.klass) )
+      return (an<T>) c->Create(ticket);
+    return nullptr;
+  }
 
   static const luaL_Reg funcs[] = {
+    {"Processor",WRAP(make)},
     { NULL, NULL },
   };
 
   static const luaL_Reg methods[] = {
-    {"query", WRAPMEM(T::Query)}, // translator.h_
+    {"process_key_event",WRAPMEM(T::ProcessKeyEvent)},
     { NULL, NULL },
   };
 
@@ -1716,6 +1842,89 @@ namespace TranslatorReg {
     { NULL, NULL },
   };
 }
+namespace FilterReg {
+  typedef Filter T;
+
+  an<T> make(const Ticket &ticket){
+    if ( auto c = T::Require(ticket.klass) )
+      return (an<T>) c->Create(ticket);
+    return nullptr;
+  }
+
+  static const luaL_Reg funcs[] = {
+    {"Filter",WRAP(make)},
+    { NULL, NULL },
+  };
+
+  static const luaL_Reg methods[] = {
+    {"apply",WRAPMEM(T::Apply)},
+    { NULL, NULL },
+  };
+
+  static const luaL_Reg vars_get[] = {
+    { NULL, NULL },
+  };
+
+  static const luaL_Reg vars_set[] = {
+    { NULL, NULL },
+  };
+}
+namespace TranslatorReg {
+  typedef Translator T;
+
+  an<T> make(const Ticket &ticket){
+    if ( auto c = T::Require(ticket.klass) )
+      return (an<T>) c->Create(ticket);
+    return nullptr;
+  }
+
+  static const luaL_Reg funcs[] = {
+    {"Translator", WRAP(make)},
+    { NULL, NULL },
+  };
+
+  static const luaL_Reg methods[] = {
+    {"query", WRAPMEM(T::Query)}, // translator.h_
+    { NULL, NULL },
+  };
+  static const luaL_Reg vars_get[] = {
+    { NULL, NULL },
+  };
+
+  static const luaL_Reg vars_set[] = {
+    { NULL, NULL },
+  };
+
+}
+
+namespace SegmentorReg {
+  typedef Segmentor T;
+
+  an<T> make(const Ticket &ticket){
+    if ( auto c = T::Require(ticket.klass) )
+      return (an<T>) c->Create(ticket);
+    return nullptr;
+  }
+
+  static const luaL_Reg funcs[] = {
+    {"Segmentor",WRAP(make)},
+    { NULL, NULL },
+  };
+
+  static const luaL_Reg methods[] = {
+    {"proceed",WRAPMEM(T::Proceed)},
+    { NULL, NULL },
+  };
+
+  static const luaL_Reg vars_get[] = {
+    { NULL, NULL },
+  };
+
+  static const luaL_Reg vars_set[] = {
+    { NULL, NULL },
+  };
+}
+
 
 //--- Lua
 #define EXPORT(ns, L) \
@@ -1775,11 +1984,16 @@ void types_init(lua_State *L) {
   EXPORT(KeySequenceReg, L);
   EXPORT(SwitcherReg, L);
   EXPORT(TicketReg , L);
-  EXPORT(TranslatorReg , L);
   // lua/src/traslator.h
   EXPORT(TranslatorOptionsReg , L);
   EXPORT(TableTranslatorReg, L);
   EXPORT(ScriptTranslatorReg, L);
+
+  EXPORT(ProcessorReg, L);
+  EXPORT(SegmentorReg, L);
+  EXPORT(TranslatorReg, L);
+  EXPORT(FilterReg, L);
+
   LogReg::init(L);
   RimeApiReg::init(L);
 }

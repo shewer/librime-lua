@@ -15,6 +15,7 @@
 #include <rime/dict/dictionary.h>
 #include <rime/dict/user_dictionary.h>
 #include <rime/switcher.h>
+#include <rime/component.h>
 #include "lua_gears.h"
 #include "lib/lua_templates.h"
 
@@ -1692,7 +1693,114 @@ namespace SwitcherReg {
     { NULL, NULL },
   };
 }
+namespace ProcessorReg {
+  typedef Processor T;
 
+  an<T> make(const Ticket &ticket){
+    if ( auto c = T::Require(ticket.klass) )
+      return (an<T>) c->Create(ticket);
+    return nullptr;
+  }
+
+  static const luaL_Reg funcs[] = {
+    {"Processor",WRAP(make)},
+    { NULL, NULL },
+  };
+
+  static const luaL_Reg methods[] = {
+    {"process_key_event",WRAPMEM(T::ProcessKeyEvent)},
+    { NULL, NULL },
+  };
+
+  static const luaL_Reg vars_get[] = {
+    { NULL, NULL },
+  };
+
+  static const luaL_Reg vars_set[] = {
+    { NULL, NULL },
+  };
+}
+namespace FilterReg {
+  typedef Filter T;
+
+  an<T> make(const Ticket &ticket){
+    if ( auto c = T::Require(ticket.klass) )
+      return (an<T>) c->Create(ticket);
+    return nullptr;
+  }
+
+  static const luaL_Reg funcs[] = {
+    {"Filter",WRAP(make)},
+    { NULL, NULL },
+  };
+
+  static const luaL_Reg methods[] = {
+    {"apply",WRAPMEM(T::Apply)},
+    { NULL, NULL },
+  };
+
+  static const luaL_Reg vars_get[] = {
+    { NULL, NULL },
+  };
+
+  static const luaL_Reg vars_set[] = {
+    { NULL, NULL },
+  };
+}
+namespace TranslatorReg {
+  typedef Translator T;
+
+  an<T> make(const Ticket &ticket){
+    if ( auto c = T::Require(ticket.klass) )
+      return (an<T>) c->Create(ticket);
+    return nullptr;
+  }
+
+  static const luaL_Reg funcs[] = {
+    {"Translator",WRAP(make)},
+    { NULL, NULL },
+  };
+
+  static const luaL_Reg methods[] = {
+    {"query",WRAPMEM(T::Query)},
+    { NULL, NULL },
+  };
+
+  static const luaL_Reg vars_get[] = {
+    { NULL, NULL },
+  };
+
+  static const luaL_Reg vars_set[] = {
+    { NULL, NULL },
+  };
+}
+namespace SegmentorReg {
+  typedef Segmentor T;
+
+  an<T> make(const Ticket &ticket){
+    if ( auto c = T::Require(ticket.klass) )
+      return (an<T>) c->Create(ticket);
+    return nullptr;
+  }
+
+  static const luaL_Reg funcs[] = {
+    {"Segmentor",WRAP(make)},
+    { NULL, NULL },
+  };
+
+  static const luaL_Reg methods[] = {
+    {"proceed",WRAPMEM(T::Proceed)},
+    { NULL, NULL },
+  };
+
+  static const luaL_Reg vars_get[] = {
+    { NULL, NULL },
+  };
+
+  static const luaL_Reg vars_set[] = {
+    { NULL, NULL },
+  };
+}
 //--- Lua
 #define EXPORT(ns, L) \
   do { \
@@ -1750,6 +1858,10 @@ void types_init(lua_State *L) {
   EXPORT(PhraseReg, L);
   EXPORT(KeySequenceReg, L);
   EXPORT(SwitcherReg, L);
+  EXPORT(ProcessorReg, L);
+  EXPORT(SegmentorReg, L);
+  EXPORT(TranslatorReg, L);
+  EXPORT(FilterReg, L);
   LogReg::init(L);
   RimeApiReg::init(L);
 }

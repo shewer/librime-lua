@@ -1818,10 +1818,13 @@ namespace TicketReg {
 namespace ProcessorReg {
   typedef Processor T;
 
-  an<T> make(const Ticket &ticket){
+  an<T> make(Ticket &ticket){
     if ( auto c = T::Require(ticket.klass) )
       return (an<T>) c->Create(ticket);
     return nullptr;
+  }
+  int process_key_event(T &t,const KeyEvent &k){
+    return t.ProcessKeyEvent(k);
   }
 
   static const luaL_Reg funcs[] = {
@@ -1830,7 +1833,8 @@ namespace ProcessorReg {
   };
 
   static const luaL_Reg methods[] = {
-    {"process_key_event",WRAPMEM(T::ProcessKeyEvent)},
+    //{"process_key_event",WRAPMEM(T::ProcessKeyEvent)},
+    {"process_key_event",WRAP(process_key_event)},
     { NULL, NULL },
   };
 
@@ -1845,7 +1849,7 @@ namespace ProcessorReg {
 namespace FilterReg {
   typedef Filter T;
 
-  an<T> make(const Ticket &ticket){
+  an<T> make(Ticket &ticket){
     if ( auto c = T::Require(ticket.klass) )
       return (an<T>) c->Create(ticket);
     return nullptr;
@@ -1872,7 +1876,7 @@ namespace FilterReg {
 namespace TranslatorReg {
   typedef Translator T;
 
-  an<T> make(const Ticket &ticket){
+  an<T> make(Ticket &ticket){
     if ( auto c = T::Require(ticket.klass) )
       return (an<T>) c->Create(ticket);
     return nullptr;
@@ -1900,7 +1904,7 @@ namespace TranslatorReg {
 namespace SegmentorReg {
   typedef Segmentor T;
 
-  an<T> make(const Ticket &ticket){
+  an<T> make(Ticket &ticket){
     if ( auto c = T::Require(ticket.klass) )
       return (an<T>) c->Create(ticket);
     return nullptr;

@@ -1,0 +1,439 @@
+/*
+ * components.icc
+ * Copyright (C) 2022 Shewer Lu <shewer@gmail.com>
+ *
+ * Distributed under terms of the MIT license.
+ * for types.cc 
+ */
+
+#ifndef COMPONENTS_ICC
+#define COMPONENTS_ICC
+using namespace rime;
+namespace TicketReg{
+  typedef Ticket T;
+
+  int raw_make(lua_State *L ){
+    int n = lua_gettop(L);
+    an<T> t;
+    if ( 0 == n ) 
+      t = New<T>();
+    else if ( 1 == n ){
+      Engine *engine= LuaType<Engine *>::todata(L, 1);
+      t = New<T>(engine);
+    }
+    else if (2 == n){
+      Schema *schema = & LuaType<Schema &>::todata(L, 1) ;
+      string ns = string( lua_tostring(L, 2)); 
+      t = New<T>(schema, ns);
+    }
+    else if (3 <= n){
+      Engine *engine= LuaType<Engine *>::todata(L, 1);
+      string ns = *LuaType<an<string>>::todata(L, 2).get();
+      string prescription = *LuaType<an<string>>::todata(L, 3).get();
+      t = New<T>(engine,ns,prescription);
+    }
+    else {
+      lua_pop(L, n);
+      return 0;
+    }
+    lua_pop(L, n);
+    LuaType<an<T>>::pushdata(L, t);
+    return 1;
+  }
+
+  static const luaL_Reg funcs[] = {
+    { "Ticket", raw_make },
+    { NULL, NULL },
+  };
+
+  static const luaL_Reg methods[] = {
+    { NULL, NULL },
+  };
+
+  static const luaL_Reg vars_get[] = {
+    {"engine",WRAPMEM_GET(T::engine)},
+    {"schema",WRAPMEM_GET(T::schema)},
+    {"name_space",WRAPMEM_GET(T::name_space)},
+    {"klass",WRAPMEM_GET(T::klass)},
+    { NULL, NULL },
+  };
+
+  static const luaL_Reg vars_set[] = {
+    {"engine",WRAPMEM_SET(T::engine)},
+    {"schema",WRAPMEM_SET(T::schema)},
+    {"name_space",WRAPMEM_SET(T::name_space)},
+    {"klass",WRAPMEM_SET(T::klass)},
+    { NULL, NULL },
+  };
+
+}
+
+
+namespace ProcessorReg{
+  typedef Processor T;
+
+  static const luaL_Reg funcs[] = {
+    { NULL, NULL },
+  };
+
+  static const luaL_Reg methods[] = {
+    {"process_key_event", WRAPMEM(T::ProcessKeyEvent)},
+    { NULL, NULL },
+  };
+
+  static const luaL_Reg vars_get[] = {
+    { NULL, NULL },
+  };
+
+  static const luaL_Reg vars_set[] = {
+    { NULL, NULL },
+  };
+
+}
+namespace SegmentorReg{
+  typedef Segmentor T;
+
+  static const luaL_Reg funcs[] = {
+    { NULL, NULL },
+  };
+
+  static const luaL_Reg methods[] = {
+    {"prrceed", WRAPMEM(T::Proceed)},
+    { NULL, NULL },
+  };
+
+  static const luaL_Reg vars_get[] = {
+    { NULL, NULL },
+  };
+
+  static const luaL_Reg vars_set[] = {
+    { NULL, NULL },
+  };
+
+
+}
+namespace TranslatorReg{
+  typedef Translator T;
+
+  static const luaL_Reg funcs[] = {
+    { NULL, NULL },
+  };
+
+  static const luaL_Reg methods[] = {
+    {"query", WRAPMEM(T::Query)},
+    { NULL, NULL },
+  };
+
+  static const luaL_Reg vars_get[] = {
+    { NULL, NULL },
+  };
+
+  static const luaL_Reg vars_set[] = {
+    { NULL, NULL },
+  };
+
+
+}
+
+namespace FilterReg{
+  typedef Filter T;
+
+  static const luaL_Reg funcs[] = {
+    { NULL, NULL },
+  };
+
+  static const luaL_Reg methods[] = {
+    {"apply",WRAPMEM(T::Apply)},
+    {"applies_to_segment",WRAPMEM(T::AppliesToSegment)},
+    { NULL, NULL },
+  };
+
+  static const luaL_Reg vars_get[] = {
+    { NULL, NULL },
+  };
+
+  static const luaL_Reg vars_set[] = {
+    { NULL, NULL },
+  };
+
+
+}
+
+namespace TranslatorOptionsReg{
+  typedef TranslatorOptions T;
+
+  static const luaL_Reg funcs[] = {
+    { NULL, NULL },
+  };
+
+  static const luaL_Reg methods[] = {
+    { NULL, NULL },
+  };
+
+  static const luaL_Reg vars_get[] = {
+    {"IsUserDictDisabledFor", WRAPMEM(T::IsUserDictDisabledFor)},
+    {"delimiters", WRAPMEM(T::delimiters)},
+    {"tag", WRAPMEM(T::tag)},
+    {"contextual_suggestions", WRAPMEM(T::contextual_suggestions)},
+    {"enable_completion", WRAPMEM(T::enable_completion)},
+    {"strict_spelling", WRAPMEM(T::strict_spelling)},
+    {"initial_quality", WRAPMEM(T::initial_quality)},
+    {"preedit_formatter", WRAPMEM(T::preedit_formatter)},
+    {"comment_formatter", WRAPMEM(T::comment_formatter)},
+    { NULL, NULL },
+  };
+
+  static const luaL_Reg vars_set[] = {
+    {"tag", WRAPMEM(T::set_tag)},
+    {"contextual_suggestions", WRAPMEM(T::set_contextual_suggestions)},
+    {"enable_completion", WRAPMEM(T::set_enable_completion)},
+    {"strict_spelling", WRAPMEM(T::set_strict_spelling)},
+    {"initial_quality", WRAPMEM(T::set_initial_quality)},
+    { NULL, NULL },
+  };
+
+
+}
+
+namespace PureMemoryReg{
+  typedef Memory T;
+
+  static const luaL_Reg funcs[] = {
+    { NULL, NULL },
+  };
+
+  static const luaL_Reg methods[] = {
+    { NULL, NULL },
+  };
+
+  static const luaL_Reg vars_get[] = {
+    { NULL, NULL },
+  };
+
+  static const luaL_Reg vars_set[] = {
+    { NULL, NULL },
+  };
+
+
+}
+
+namespace TableTranslatorReg{
+  typedef LuaTableTranslator T;
+  typedef Memory M;
+  typedef TranslatorOptions TO;
+  typedef Translation TN;
+// methods
+  an<TN> query(T &t, const string &input, const Segment &segment){
+    return t.Query(input,segment);
+  }
+  bool memorize(T &t, const CommitEntry &commit_entry){
+    return t.Memorize(commit_entry);
+  }
+  an<TN> make_sentence(T &t, const string &input, size_t start, bool include_prefix_phrases ){
+    return t.MakeSentence(input, start, include_prefix_phrases);
+  }
+  string get_preceding_text(T &t, size_t start){
+    return t.GetPrecedingText(start);
+  }
+  UnityTableEncoder * encoder(T &t){
+    return t.encoder();
+  }
+// gets & sets
+  an<M> get_memory(an<T> t){
+    return As<M>(t); 
+  }
+  an<TO> get_options(an<T> t){
+    return As<TO>(t);
+  }
+
+
+  static const luaL_Reg funcs[] = {
+    { NULL, NULL },
+  };
+
+ static const luaL_Reg methods[] = {
+    {"query", WRAP(query)},
+    {"memorize", WRAP(memorize)},
+    {"make_sentence", WRAP(make_sentence)},
+    {"get_preceding_text", WRAP(get_preceding_text)},
+    {"encoder", WRAP(encoder)},
+
+    { NULL, NULL },
+  };
+  static const luaL_Reg vars_get[] = {
+    {"memory", WRAP(get_memory)},
+    {"options", WRAP(get_options)},
+    {"enable_charset_filter", WRAPMEM(T::enable_charset_filter)},
+    {"enable_encoder", WRAPMEM(T::enable_encoder)},
+    {"enable_sentence", WRAPMEM(T::enable_sentence)},
+    {"sentence_over_completion", WRAPMEM(T::sentence_over_completion)},
+    {"encode_commit_history", WRAPMEM(T::encode_commit_history)},
+    {"max_phrase_length", WRAPMEM(T::max_phrase_length)},
+    {"max_homographs", WRAPMEM(T::max_homographs)},
+    { NULL, NULL },
+  };
+
+  static const luaL_Reg vars_set[] = {
+    {"enable_charset_filter", WRAPMEM(T::set_enable_charset_filter)},
+    {"enable_encoder", WRAPMEM(T::set_enable_encoder)},
+    {"enable_sentence", WRAPMEM(T::set_enable_sentence)},
+    {"sentence_over_completion", WRAPMEM(T::set_sentence_over_completion)},
+    {"encode_commit_history", WRAPMEM(T::set_encode_commit_history)},
+    {"max_phrase_length", WRAPMEM(T::set_max_phrase_length)},
+    {"max_homographs", WRAPMEM(T::set_max_homographs)},
+    { NULL, NULL },
+  };
+
+
+}
+namespace ScriptTranslatorReg{
+  typedef LuaScriptTranslator T;
+  typedef Memory M;
+  typedef TranslatorOptions TO;
+  typedef Translation TN;
+
+// methods
+  an<TN> query(T &t, const string &input, const Segment &segment){
+    return t.Query(input,segment);
+  }
+  bool memorize(T &t, const CommitEntry &commit_entry){
+    return t.Memorize(commit_entry);
+  }
+  string format_preedit(T &t, const string& preedit){
+    return t.FormatPreedit(preedit);
+  }
+  string spell(T &t, const Code& code){
+    return t.Spell(code);
+  }
+  string get_preceding_text(T &t, size_t start){
+    return t.GetPrecedingText(start);
+  }
+// gets & sets
+  an<M> get_memory(an<T> t){
+    return As<M>(t); 
+  }
+  an<TO> get_options(an<T> t){
+    return As<TO>(t);
+  }
+
+  static const luaL_Reg funcs[] = {
+    { NULL, NULL },
+  };
+
+  static const luaL_Reg methods[] = {
+    {"query", WRAP(query)},
+    {"memorize", WRAP(memorize)},
+    {"format_preedit", WRAP(format_preedit)},
+    {"spell", WRAP(spell)},
+    {"get_preceding_text", WRAP(get_preceding_text)},
+    { NULL, NULL },
+  };
+
+  static const luaL_Reg vars_get[] = {
+    {"memory", WRAP(get_memory)},
+    {"options", WRAP(get_options)},
+    {"max_homophones", WRAPMEM(T::max_homophones)},
+    {"spelling_hints", WRAPMEM(T::spelling_hints)},
+    {"always_show_comments", WRAPMEM(T::always_show_comments)},
+    {"enable_correction", WRAPMEM(T::enable_correction)},
+    { NULL, NULL },
+  };
+
+  static const luaL_Reg vars_set[] = {
+    {"max_homophones", WRAPMEM(T::set_max_homophones)},
+    {"spelling_hints", WRAPMEM(T::set_spelling_hints)},
+    {"always_show_comments", WRAPMEM(T::set_always_show_comments)},
+    {"enable_correction", WRAPMEM(T::set_enable_correction)},
+    { NULL, NULL },
+  };
+
+
+}
+namespace ComponentsReg{
+  typedef Processor P;
+  typedef Segmentor S;
+  typedef Translator T;
+  typedef Filter F;
+  typedef LuaTableTranslator TT;
+  typedef LuaScriptTranslator ST;
+
+
+  template<class TM>
+    an<TM> create(Engine *engine, const string &ns, const string &prescription){
+      Ticket ticket(engine, ns, prescription);
+      if (auto c = TM::Require(ticket.klass) ){
+        return (an<TM>) c -> Create(ticket);
+      }
+      else {
+        LOG(ERROR) << "error creating " << ns << "; " << ticket.klass << ".";
+        return {};
+      }
+    };
+
+  an<P> processor(Engine * engine, const string & prescription) {
+    return create<P>(engine, "processor", prescription);
+  }
+  an<S> segmentor(Engine * engine, const string & prescription) {
+    return create<S>(engine, "segmentor", prescription);
+  }
+  an<T> translator(Engine * engine, const string & prescription) {
+    return create<T>(engine, "translator", prescription);
+  }
+  an<F> filter(Engine * engine, const string & prescription) {
+    return create<F>(engine, "filter", prescription);
+  }
+
+  an<TT> table_translator(Engine * engine, const string & prescription) {
+    Ticket ticket(engine, "table_translator", prescription);
+    return  New<TT>(ticket);
+  }
+  an<ST> script_translator(Engine * engine, const string & prescription) {
+    Ticket ticket(engine, "script_translator", prescription);
+    return New<ST>(ticket);
+  }
+
+  static const luaL_Reg funcs[] = {
+    {"Processor", WRAP(processor)},
+    {"Segmentor", WRAP(segmentor)},
+    {"Translator", WRAP(translator)},
+    {"Filter", WRAP(filter)},
+    {"TableTranslator", WRAP(table_translator)},
+    {"ScriptTranslator", WRAP(script_translator)},
+    { NULL, NULL },
+  };
+
+  static const luaL_Reg methods[] = {
+    { NULL, NULL },
+  };
+
+  static const luaL_Reg vars_get[] = {
+    { NULL, NULL },
+  };
+
+  static const luaL_Reg vars_set[] = {
+    { NULL, NULL },
+  };
+  void init(lua_State *L) {
+    lua_createtable(L, 0, 0);
+    luaL_setfuncs(L, funcs, 0);
+    lua_setglobal(L, "Components");
+  }
+
+
+}
+
+#define EXPORT_COMPONENTS(L) {\
+  EXPORT(TicketReg, L);\
+  EXPORT(ProcessorReg, L);\
+  EXPORT(SegmentorReg, L);\
+  EXPORT(TranslatorReg, L);\
+  EXPORT(FilterReg, L);\
+  EXPORT(TranslatorOptionsReg, L);\
+  EXPORT(PureMemoryReg, L);\
+  EXPORT(TableTranslatorReg, L);\
+  EXPORT(ScriptTranslatorReg, L);\
+  ComponentsReg::init(L);\
+}
+
+#endif /* !COMPONENTS_ICC */
+

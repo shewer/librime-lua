@@ -17,6 +17,11 @@
 #include <opencc/opencc.h>
 #include "lua_ext_gears.h"
 
+#define USE_COMPONENTS
+#ifdef USE_COMPONENTS
+#include "components.icc"
+#endif /* USE_COMPONENTS */
+
 using namespace rime;
 
 template<typename T>
@@ -1635,7 +1640,6 @@ namespace OpenccReg{
     { NULL, NULL },
   };
 }
-
 //--- Lua
 #define EXPORT(ns, L) \
   do { \
@@ -1694,6 +1698,9 @@ void types_init(lua_State *L) {
   EXPORT(KeySequenceReg, L);
   EXPORT(SwitcherReg, L);
   EXPORT(OpenccReg, L);
+#ifdef COMPONENTS_ICC
+  EXPORT_COMPONENTS(L);
+#endif /* endif COMPONENTS_ICC */
   LogReg::init(L);
   RimeApiReg::init(L);
 

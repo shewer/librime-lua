@@ -216,13 +216,68 @@ namespace TranslationReg {
     return 2;
   }
 
+  int raw_pipe(lua_State *L) {
+    int n = lua_gettop(L);
+    if ( 2 > n )
+      return 0;
+    // self, func , ... --> func , self , ...
+    lua_rotate(L, 1, -1);
+    lua_rotate(L, 2, 1);
+    raw_make(L);
+    return 1;
+  }
+
+  int raw_finish(lua_State *L) {
+    int n = lua_gettop(L);
+    if ( 1 > n ){
+      return 0;
+    }else if ( 2  > n ){
+      luaL_loadstring(L,
+          "local input = ...\n"
+          "  for cand in input:iter() do \n"
+          "    yield(cand)\n"
+          "  end\n"
+          "end\n");
+      n=2;
+      std::cout << "type check " << luaL_typename(L, -1);
+    }
+    // self, func , ... --> func , self , ...
+    lua_rotate(L, 1, -1);
+    lua_rotate(L, 2, 1);
+
+    lua_call(L, n-1, 0);
+    return 0;
+  };
+
+  int raw_test(lua_State *L) {
+    int n = lua_gettop(L);
+    if ( 1 > n )
+      return 0;
+
+    luaL_loadstring(L,
+        "local i = ...\n"
+        "for j=1,i do \n"
+        "  print(j)\n"
+        "end\n" );
+    n= lua_gettop(L);
+    std::cout << "n: " << n  << "type:" << luaL_typename(L, -1)<< std::endl;
+    lua_rotate(L, 1, -1);
+    lua_rotate(L, 2, 1);
+
+    lua_call(L, n-1 , 0);
+    return 0;
+  }
+
   static const luaL_Reg funcs[] = {
     { "Translation", raw_make },
+    { "Translation_test", raw_test },
     { NULL, NULL },
   };
 
   static const luaL_Reg methods[] = {
     { "iter", raw_iter },
+    { "pipe", raw_pipe },
+    { "finish", raw_finish },
     { NULL, NULL },
   };
 
@@ -327,7 +382,7 @@ namespace SegmentationReg {
 
 namespace MenuReg {
   typedef Menu T;
-    
+
   an<T> make() {
     return New<T>();
   }
@@ -544,7 +599,7 @@ namespace CompositionReg {
   Segmentation *toSegmentation(T &t) {
     return dynamic_cast<Segmentation *>(&t);
   }
-  
+
   Segment &back(T &t) {
     return t.back();
   }
@@ -1435,7 +1490,7 @@ namespace MemoryReg {
 namespace PhraseReg {
   typedef Phrase T;
 
-  an<T> make(MemoryReg::LuaMemory& memory, 
+  an<T> make(MemoryReg::LuaMemory& memory,
     const string& type,
     size_t start,
     size_t end,

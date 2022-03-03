@@ -1257,6 +1257,9 @@ namespace CommitEntryReg {
 
   static const luaL_Reg methods[] = {
     {"get",WRAP(get)},
+    {"empty",WRAPMEM(T::empty)},
+    {"clear",WRAPMEM(T::Clear)},
+    {"append_phrase",WRAPMEM(T::AppendPhrase)},
     { NULL, NULL },
   };
 
@@ -1364,6 +1367,9 @@ namespace MemoryReg {
       translatorTicket.name_space = LuaType<string>::todata(L, 3, &C);
 
     an<T> memoli = New<T>(lua, translatorTicket);
+    if (4 <= n && memoli && lua_isfunction(L, 4))
+      memoli->memorize( LuaObj::todata(L, 4));
+
     LuaType<an<T>>::pushdata(L, memoli);
     return 1;
   }
@@ -1469,6 +1475,12 @@ namespace PhraseReg {
   an<Candidate> toCandidate(an<T> phrase) {
     return phrase;
   }
+  double quality(T &t){
+    return t.quality();
+  }
+  void set_quality(T &t, double v){
+    t.set_quality(v);
+  }
 
   static const luaL_Reg funcs[] = {
     { "Phrase", WRAP(make) },
@@ -1485,7 +1497,7 @@ namespace PhraseReg {
     { "type", WRAPMEM(T::type) },
     { "start", WRAPMEM(T::start) },
     { "_end", WRAPMEM(T::end) }, // end is keyword in Lua...
-    { "quality", WRAPMEM(T::quality) },
+    { "quality", WRAP(quality) },
     { "text", WRAPMEM(T::text) },
     { "comment", WRAPMEM(T::comment) },
     { "preedit", WRAPMEM(T::preedit) },
@@ -1501,7 +1513,7 @@ namespace PhraseReg {
     { "type", WRAPMEM(T::set_type) },
     { "start", WRAPMEM(T::set_start) },
     { "_end", WRAPMEM(T::set_end) },
-    { "quality", WRAPMEM(T::set_quality) },
+    { "quality", WRAP(set_quality) },
     { "comment", WRAPMEM(T::set_comment) },
     { "preedit", WRAPMEM(T::set_preedit) },
     { "weight", WRAPMEM(T::set_weight)},

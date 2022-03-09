@@ -3,7 +3,7 @@
  * Copyright (C) 2022 Shewer Lu <shewer@gmail.com>
  *
  * Distributed under terms of the MIT license.
- * for types.cc 
+ * for types.cc
  */
 
 #ifndef COMPONENTS_ICC
@@ -15,7 +15,7 @@ namespace TicketReg{
   int raw_make(lua_State *L ){
     int n = lua_gettop(L);
     an<T> t;
-    if ( 0 == n ) 
+    if ( 0 == n )
       t = New<T>();
     else if ( 1 == n ){
       Engine *engine= LuaType<Engine *>::todata(L, 1);
@@ -23,7 +23,7 @@ namespace TicketReg{
     }
     else if (2 == n){
       Schema *schema = & LuaType<Schema &>::todata(L, 1) ;
-      string ns = string( lua_tostring(L, 2)); 
+      string ns = string( lua_tostring(L, 2));
       t = New<T>(schema, ns);
     }
     else if (3 <= n){
@@ -207,6 +207,41 @@ namespace PureMemoryReg{
   };
 
   static const luaL_Reg vars_get[] = {
+    {"dict", WRAPMEM(T::dict)},
+    {"user_dict", WRAPMEM(T::user_dict)},
+    { NULL, NULL },
+  };
+
+  static const luaL_Reg vars_set[] = {
+    { NULL, NULL },
+  };
+}
+namespace DictionaryReg{
+  typedef Dictionary T;
+  typedef DictEntryIterator DT;
+
+  an<DT> lookup_words(T &t, const string &str_code, bool preedictive, size_t expand_search_limit){
+    an<DT> iter = New<DT>();
+    t.LookupWords(&(*iter),str_code, preedictive, expand_search_limit);
+    return iter;
+  }
+  static const luaL_Reg funcs[] = {
+    { NULL, NULL },
+  };
+  std::vector<string> decode(T& dict, Code& code) {
+    std::vector<string> res;
+    dict.Decode(code,&res);
+    return res;
+  }
+
+  static const luaL_Reg methods[] = {
+    {"lookup",WRAPMEM(T::Lookup)},
+    {"lookup_words",WRAP(lookup_words)},
+    {"decode",WRAP(decode)},
+    { NULL, NULL },
+  };
+
+  static const luaL_Reg vars_get[] = {
     { NULL, NULL },
   };
 
@@ -214,6 +249,134 @@ namespace PureMemoryReg{
     { NULL, NULL },
   };
 
+}
+namespace UserDictionaryReg{
+  typedef UserDictionary T;
+  typedef UserDictEntryIterator R;
+
+  an<R> lookup_words(T &t, const string &str_code, bool preedictive, size_t expand_search_limit){
+    an<R> iter = New<R>();
+    t.LookupWords( &(*iter),str_code, preedictive, expand_search_limit);
+    return iter;
+  }
+  static const luaL_Reg funcs[] = {
+    { NULL, NULL },
+  };
+
+  static const luaL_Reg methods[] = {
+    {"lookup",WRAPMEM(T::Lookup)},
+    {"lookup_words",WRAP(lookup_words)},
+    { NULL, NULL },
+  };
+
+  static const luaL_Reg vars_get[] = {
+    { NULL, NULL },
+  };
+
+  static const luaL_Reg vars_set[] = {
+    { NULL, NULL },
+  };
+
+}
+namespace DictEntryIteratorReg{
+  typedef DictEntryIterator T;
+  typedef DictEntry R;
+
+  optional<an<R>> next(T &t) {
+    if (t.exhausted())
+      return {};
+
+    auto c = t.Peek();
+    t.Next();
+    return c;
+  }
+
+  int raw_iter(lua_State *L) {
+    lua_pushcfunction(L, WRAP(next));
+    lua_pushvalue(L, 1);
+    return 2;
+  }
+  int raw_add_filter(lua_State *L){
+    int n = lua_gettop(L);
+    if (2 > n)
+      return 0;
+    if (!lua_isfunction(L, 2))
+      return 0;
+
+    auto t = LuaType<an<T>>::todata(L,1);
+    an<LuaObj> func = LuaObj::todata(L,2);
+    lua_pop(L, lua_gettop(L));
+    Lua *lua = Lua::from_state(L);
+
+    //function<bool(an<R>)> callback = [](an<R> entry)->bool { LOG(ERROR) << "--<<" << entry->text ; return true ;};
+    function<bool(an<R>)> callback =
+        [func,lua]( an<R> entry)-> bool {
+        auto r = lua->call<bool, an<LuaObj>, an<R> >(func, entry);
+        if (r.ok())
+          return r.get();
+        auto e = r.get_err();
+        LOG(ERROR) << "lua->call DictIterator.filter_ error(" << e.status << "): " << e.e;
+        return false;
+        };
+    t->AddFilter( callback);
+    return 0;
+  }
+
+  static const luaL_Reg funcs[] = {
+    { NULL, NULL },
+  };
+
+  static const luaL_Reg methods[] = {
+    {"iter", raw_iter},
+    {"add_filter", raw_add_filter},
+    {"sort",WRAPMEM(T::Sort)},
+    { NULL, NULL },
+  };
+
+  static const luaL_Reg vars_get[] = {
+    { NULL, NULL },
+  };
+
+  static const luaL_Reg vars_set[] = {
+    { NULL, NULL },
+  };
+
+}
+namespace UserDictEntryIteratorReg{
+  typedef UserDictEntryIterator T;
+  typedef DictEntry R;
+
+  optional<an<R>> next(T &t) {
+    if (t.exhausted())
+      return {};
+
+    auto c = t.Peek();
+    t.Next();
+    return c;
+  }
+
+  int raw_iter(lua_State *L) {
+    lua_pushcfunction(L, WRAP(next));
+    lua_pushvalue(L, 1);
+    return 2;
+  }
+  static const luaL_Reg funcs[] = {
+    {"iter", raw_iter},
+    {"sort_range",WRAPMEM(T::SortRange)},
+    { NULL, NULL },
+  };
+
+  static const luaL_Reg methods[] = {
+    { NULL, NULL },
+  };
+
+  static const luaL_Reg vars_get[] = {
+    { NULL, NULL },
+  };
+
+  static const luaL_Reg vars_set[] = {
+    { NULL, NULL },
+  };
 
 }
 
@@ -240,7 +403,7 @@ namespace TableTranslatorReg{
   }
 // gets & sets
   an<M> get_memory(an<T> t){
-    return As<M>(t); 
+    return As<M>(t);
   }
   an<TO> get_options(an<T> t){
     return As<TO>(t);
@@ -310,7 +473,7 @@ namespace ScriptTranslatorReg{
   }
 // gets & sets
   an<M> get_memory(an<T> t){
-    return As<M>(t); 
+    return As<M>(t);
   }
   an<TO> get_options(an<T> t){
     return As<TO>(t);
@@ -356,6 +519,10 @@ namespace ComponentsReg{
   typedef Filter F;
   typedef LuaTableTranslator TT;
   typedef LuaScriptTranslator ST;
+  typedef LuaMemory LM;
+  typedef Memory M;
+  typedef Dictionary D;
+  typedef UserDictionary UD;
 
 
   template<class TM>
@@ -370,27 +537,51 @@ namespace ComponentsReg{
       }
     };
 
-  an<P> processor(Engine * engine, const string & prescription) {
+  an<P> processor(Engine *engine, const string &prescription) {
     return create<P>(engine, "processor", prescription);
   }
-  an<S> segmentor(Engine * engine, const string & prescription) {
+  an<S> segmentor(Engine *engine, const string &prescription) {
     return create<S>(engine, "segmentor", prescription);
   }
-  an<T> translator(Engine * engine, const string & prescription) {
+  an<T> translator(Engine *engine, const string &prescription) {
     return create<T>(engine, "translator", prescription);
   }
-  an<F> filter(Engine * engine, const string & prescription) {
+  an<F> filter(Engine *engine, const string &prescription) {
     return create<F>(engine, "filter", prescription);
   }
 
-  an<TT> table_translator(Engine * engine, const string & prescription) {
+  an<TT> table_translator(Engine *engine, const string &prescription) {
     Ticket ticket(engine, "table_translator", prescription);
     return  New<TT>(ticket);
   }
-  an<ST> script_translator(Engine * engine, const string & prescription) {
+  an<ST> script_translator(Engine *engine, const string &prescription) {
     Ticket ticket(engine, "script_translator", prescription);
     return New<ST>(ticket);
   }
+  an<M> memory(Engine *engine, const string &prescription){
+    Ticket ticket(engine, "translator", prescription);
+    return New<LM>(ticket);
+  }
+
+  an<D> dictionary(const string &schema_id, const string &ns){
+    Ticket ticket( new Schema(schema_id), ns);
+    D *dict={};
+    if (auto r = D::Require("dictionary")) {
+      if ( dict = r->Create(ticket))
+        dict->Load();
+    }
+    return (an<D>)dict;
+  }
+  an<UD> user_dictionary(const string &schema_id, const string &ns){
+    Ticket ticket( new Schema(schema_id), ns);
+    UD *dict={};
+    if (auto r = UD::Require("user_dictionary") ) {
+      if ( dict = r->Create(ticket))
+        dict->Load();
+    }
+    return (an<UD>) dict;
+  }
+
 
   static const luaL_Reg funcs[] = {
     {"Processor", WRAP(processor)},
@@ -399,6 +590,9 @@ namespace ComponentsReg{
     {"Filter", WRAP(filter)},
     {"TableTranslator", WRAP(table_translator)},
     {"ScriptTranslator", WRAP(script_translator)},
+    {"Memory", WRAP(memory)},
+    {"Dictionary", WRAP(dictionary)},
+    {"UserDictionary", WRAP(user_dictionary)},
     { NULL, NULL },
   };
 
@@ -432,6 +626,11 @@ namespace ComponentsReg{
   EXPORT(PureMemoryReg, L);\
   EXPORT(TableTranslatorReg, L);\
   EXPORT(ScriptTranslatorReg, L);\
+  EXPORT(PureMemoryReg, L);\
+  EXPORT(DictionaryReg, L);\
+  EXPORT(UserDictionaryReg, L);\
+  EXPORT(DictEntryIteratorReg, L);\
+  EXPORT(UserDictEntryIteratorReg, L);\
   ComponentsReg::init(L);\
 }
 

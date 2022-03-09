@@ -1347,6 +1347,7 @@ namespace CodeReg {
 }
 namespace MemoryReg {
   typedef LuaMemory T;
+  typedef Memory R;
 
 
   // XXX: Currently the WRAP macro is not generic enough,
@@ -1370,9 +1371,10 @@ namespace MemoryReg {
     if (4 <= n && memoli && lua_isfunction(L, 4))
       memoli->memorize( LuaObj::todata(L, 4));
 
-    LuaType<an<T>>::pushdata(L, memoli);
+    LuaType<an<T>>::pushdata(L, memoli) ;
     return 1;
   }
+
 
   bool dictLookup(T& memory, const string& input, const bool isExpand,size_t limit) {
     memory.clearDict();
@@ -1428,10 +1430,6 @@ namespace MemoryReg {
     return 2;
   }
 
-  static const luaL_Reg funcs[] = {
-      {"Memory", raw_make},
-      {NULL, NULL},
-  };
 
   std::vector<string> decode(T& memory, Code& code) {
     std::vector<string> res;
@@ -1439,10 +1437,24 @@ namespace MemoryReg {
       dict->Decode(code,&res);
     return res;
   }
+
+  an<R> to_memory(T &t){
+    return (an<R>) &t;
+  }
+  const Language*  get_language(T &t){
+    return t.language();
+  }
+
+  static const luaL_Reg funcs[] = {
+      {"Memory", raw_make},
+      {NULL, NULL},
+  };
+
   static const luaL_Reg methods[] = {
       { "dict_lookup", WRAP(dictLookup)},
       { "user_lookup", WRAP(userLookup)},
       { "memorize", WRAPMEM(T::memorize)},
+      //{ "memorize", WRAP(memorize)},
       { "decode", WRAP(decode)},
       { "iter_dict", raw_iter_dict},
       { "iter_user", raw_iter_user},
@@ -1451,6 +1463,10 @@ namespace MemoryReg {
   };
 
   static const luaL_Reg vars_get[] = {
+      {"dict", WRAPMEM(T::dict)},
+      {"user_dict", WRAPMEM(T::user_dict)},
+      {"memory", WRAP(to_memory)},
+      {"language", WRAP(get_language)},
       {NULL, NULL},
   };
 

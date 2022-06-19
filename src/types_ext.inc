@@ -166,6 +166,10 @@ namespace LevelDbReg{
     return ( t->Fetch(key,&res) )? res : nullptr ; 
   }
 
+  bool loaded(an<T> t){
+    return t->loaded();
+  }
+
   static const luaL_Reg funcs[] = {
     {"LevelDb", WRAP(make)},
     { NULL, NULL },
@@ -184,6 +188,7 @@ namespace LevelDbReg{
   };
 
   static const luaL_Reg vars_get[] = {
+    {"loaded",WRAP(loaded)},
     { NULL, NULL },
   };
 

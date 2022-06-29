@@ -98,6 +98,41 @@ namespace FilterReg{
     { NULL, NULL },
   };
 }
+// ReverseDictionary
+namespace ReverseLookupDictionaryReg {
+  typedef ReverseLookupDictionary T;
+
+  an<T> make(const string& dict_name) {
+    auto c = (ReverseLookupDictionaryComponent *) T::Require("reverse_lookup_dictionary");
+    an<T> t = (an<T>) c->Create(dict_name);
+    if ( t  && t->Load() )
+      return t;
+    return {};
+  }
+
+  string lookup(T& db, const string &key){
+    string res;
+    return ( db.ReverseLookup(key, &res) ) ? res : string("") ;
+  }
+
+  static const luaL_Reg funcs[] = {
+    {"ReverseLookup",WRAP(make)},
+    { NULL, NULL },
+  };
+
+  static const luaL_Reg methods[] = {
+    {"lookup",WRAP(lookup)},
+    { NULL, NULL },
+  };
+
+  static const luaL_Reg vars_get[] = {
+    { NULL, NULL },
+  };
+
+  static const luaL_Reg vars_set[] = {
+    { NULL, NULL },
+  };
+}
 
 // leveldb 
 namespace DbAccessorReg{
@@ -256,6 +291,7 @@ namespace ComponentReg{
   EXPORT(FilterReg, L);\
   EXPORT(DbAccessorReg, L);\
   EXPORT(LevelDbReg, L);\
+  EXPORT(ReverseLookupDictionaryReg, L);\
   ComponentReg::init(L);\
 }
 

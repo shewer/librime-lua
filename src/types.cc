@@ -1438,12 +1438,6 @@ namespace PhraseReg {
   an<Candidate> toCandidate(an<T> phrase) {
     return phrase;
   }
-  double quality(T &t){
-    return t.quality();
-  }
-  void set_quality(T &t, double v){
-    t.set_quality(v);
-  }
 
   string type(T &t) { return t.type(); }
   size_t start(T &t) { return t.start(); }

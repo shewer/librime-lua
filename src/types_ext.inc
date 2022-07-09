@@ -6,19 +6,26 @@
  */
 
 #ifndef _TYPE_EXT_INC
-#define _TYPE_EXT_INC 
+#define _TYPE_EXT_INC
 #include <rime/common.h>
 using namespace rime;
-#include <rime/dict/level_db.h> 
+#include <rime/dict/level_db.h>
 
-namespace ProcessorReg{ 
+namespace ProcessorReg{
   typedef Processor T;
+  int process_key_event(T &t, const KeyEvent &key){
+    switch (t.ProcessKeyEvent(key) ) {
+      case kRejected: return kRejected;
+      case kAccepted: return kAccepted;
+      default: return kNoop;
+    }
+  }
   static const luaL_Reg funcs[] = {
     { NULL, NULL },
   };
 
   static const luaL_Reg methods[] = {
-    {"press_key_event",WRAPMEM(T::ProcessKeyEvent)},
+    {"process_key_event",WRAP(process_key_event)},
     { NULL, NULL },
   };
 
@@ -35,12 +42,16 @@ namespace SegmentorReg{
 
   typedef Segmentor T;
 
+  bool proceed(T &t, Segmentation &s) {
+    return t.Proceed(&s);
+  }
+
   static const luaL_Reg funcs[] = {
     { NULL, NULL },
   };
 
   static const luaL_Reg methods[] = {
-    {"proceed",WRAPMEM(T::Proceed)},
+    {"proceed",WRAP(proceed)},
     { NULL, NULL },
   };
 
@@ -101,12 +112,14 @@ namespace FilterReg{
 // ReverseDictionary
 namespace ReverseLookupDictionaryReg {
   typedef ReverseLookupDictionary T;
+  typedef ReverseLookupDictionaryComponent C;
 
   an<T> make(const string& dict_name) {
-    auto c = (ReverseLookupDictionaryComponent *) T::Require("reverse_lookup_dictionary");
-    an<T> t = (an<T>) c->Create(dict_name);
-    if ( t  && t->Load() )
-      return t;
+    if ( auto c = (C *)T::Require("reverse_lookup_dictionary") ) {
+      auto t = (an<T>)c->Create(dict_name);
+      if ( t  && t->Load() )
+        return t;
+    };
     return {};
   }
 
@@ -134,14 +147,14 @@ namespace ReverseLookupDictionaryReg {
   };
 }
 
-// leveldb 
+// leveldb
 namespace DbAccessorReg{
   typedef DbAccessor T;
 
   // return key , value or nil
   int raw_peek(lua_State* L){
     int n = lua_gettop(L);
-    if (1 > n ) 
+    if (1 > n )
       return 0;
     auto a = LuaType<an<T>>::todata(L, 1);
     string key,value;
@@ -192,13 +205,13 @@ namespace LevelDbReg{
   typedef LevelDb T;
   typedef DbAccessor A;
 
-  // 
+  //
   an<T> make(const string& file_name, const string& db_name, const string& db_type){
     return New<LevelDb>(file_name,db_name,db_type);
   }
   string fetch(an<T> t, const string& key){
     string res;
-    return ( t->Fetch(key,&res) )? res : nullptr ; 
+    return ( t->Fetch(key,&res) )? res : nullptr ;
   }
 
   bool loaded(an<T> t){
@@ -232,17 +245,6 @@ namespace LevelDbReg{
   };
 }
 
-template <typename O>
-an<O> create(Ticket & ticket){
-  if (auto c = O::Require(ticket.klass)) {
-    return (an<O>) c->Create(ticket);
-  }
-  else {
-    LOG(ERROR) << "error creating " << typeid(O).name() << ": '" << ticket.klass << "'";
-    return {};
-  }
-}
-
 namespace ComponentReg{
 
   typedef Processor P;
@@ -250,31 +252,41 @@ namespace ComponentReg{
   typedef Translator T;
   typedef Filter F;
 
-  an<P> create_processor(Engine *e, string ns, string prescription){
-    Ticket t = Ticket(e, ns, prescription);
-    return create<P>(t);
-  }
-  an<S> create_segmentor(Engine *e, string ns, string prescription){
-    Ticket t = Ticket(e, ns, prescription);
-    return create<S>(t);
-  }
-  an<T> create_translator(Engine *e, string ns, string prescription){
-    Ticket t = Ticket(e, ns, prescription);
-    return create<T>(t);
-  }
-  an<F> create_filter(Engine *e, string ns, string prescription){
-    Ticket t = Ticket(e, ns, prescription);
-    return create<F>(t);
-  }
-  
+
+  template <typename O>
+  int raw_create(lua_State *L){
+    int n = lua_gettop(L);
+    if (3 > n || 4 < n)
+      return 0;
+
+    C_State C;
+    Ticket ticket(
+      LuaType<Engine *>::todata(L, 1),
+      LuaType<string>::todata(L, -2, &C),
+      LuaType<string>::todata(L, -1, &C)
+    );
+    if (n == 4)
+      ticket.schema = &(LuaType<Schema &>::todata(L, 2) ); //overwrite schema
+
+    if (auto c = O::Require(ticket.klass)) {
+      an<O> obj = (an<O>) c->Create(ticket);
+      LuaType<an<O>>::pushdata(L, obj);
+      return 1;
+    }
+    else {
+      LOG(ERROR) << "error creating " << typeid(O).name() << ": '" << ticket.klass << "'";
+      return 0;
+    }
+  };
 
   static const luaL_Reg funcs[] = {
-    {"Processor",  WRAP(create_processor)},
-    {"Segment"   , WRAP(create_segmentor)},
-    {"Translator", WRAP(create_translator)},
-    {"Filter", WRAP(create_filter)},
+    {"Processor", raw_create<P>},
+    {"Segmentor", raw_create<S>},
+    {"Translator", raw_create<T>},
+    {"Filter", raw_create<F>},
     { NULL, NULL },
   };
+
 
   void init(lua_State *L) {
     lua_createtable(L, 0, 0);

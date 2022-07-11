@@ -1460,30 +1460,30 @@ namespace PhraseReg {
   };
 
   static const luaL_Reg vars_get[] = {
-    { "language", WRAPMEM(T::language)},
-    { "type", WRAP(type) },
-    { "start", WRAP(start) },
-    { "_end", WRAP(end) }, // end is keyword in Lua...
-    { "quality", WRAP(quality) },
-    { "text", WRAPMEM(T::text) },
-    { "comment", WRAPMEM(T::comment) },
-    { "preedit", WRAPMEM(T::preedit) },
-    { "weight", WRAPMEM(T::weight)},
-    { "code", WRAPMEM(T::code)},
-    { "entry", WRAPMEM(T::entry)},
+    { "language", WRAPMEM(T, language)},
+    { "type", WRAPMEM(T, type) },
+    { "start", WRAPMEM(T, start) },
+    { "_end", WRAPMEM(T, end) }, // end is keyword in Lua...
+    { "quality", WRAPMEM(T, quality) },
+    { "text", WRAPMEM(T, text) },
+    { "comment", WRAPMEM(T, comment) },
+    { "preedit", WRAPMEM(T, preedit) },
+    { "weight", WRAPMEM(T, weight)},
+    { "code", WRAPMEM(T, code)},
+    { "entry", WRAPMEM(T, entry)},
     //span
     //language doesn't wrap yet, so Wrap it later
     { NULL, NULL },
   };
 
   static const luaL_Reg vars_set[] = {
-    { "type", WRAP(set_type) },
-    { "start", WRAP(set_start) },
-    { "_end", WRAP(set_end) },
-    { "quality", WRAP(set_quality) },
-    { "comment", WRAPMEM(T::set_comment) },
-    { "preedit", WRAPMEM(T::set_preedit) },
-    { "weight", WRAPMEM(T::set_weight)},
+    { "type", WRAPMEM(T, set_type) },
+    { "start", WRAPMEM(T, set_start) },
+    { "_end", WRAPMEM(T, set_end) },
+    { "quality", WRAPMEM(T, set_quality) },
+    { "comment", WRAPMEM(T, set_comment) },
+    { "preedit", WRAPMEM(T, set_preedit) },
+    { "weight", WRAPMEM(T, set_weight)},
     // set_syllabifier
     { NULL, NULL },
   };
@@ -1492,8 +1492,11 @@ namespace PhraseReg {
 namespace KeySequenceReg {
   typedef KeySequence T;
 
-  an<T> make() {
-    return New<T>();
+  int raw_make(lua_State *L){
+    an<T> t = (0<lua_gettop(L)) ? New<T>((  lua_tostring(L,1) )) : New<T>();
+    lua_pop(L,lua_gettop(L));
+    LuaType<an<T>>::pushdata(L, t);
+    return 1;
   }
 
   vector<KeyEvent> toKeyEvent(T& t) {
@@ -1501,7 +1504,7 @@ namespace KeySequenceReg {
   }
 
   static const luaL_Reg funcs[] = {
-    { "KeySequence", WRAP(make) },
+    { "KeySequence", raw_make },
     { NULL, NULL },
   };
 

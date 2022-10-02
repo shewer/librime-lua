@@ -1669,12 +1669,6 @@ namespace OpenccReg {
       return {};
     }
   }
-  optional<vector<string>> convert_word(T &t,const string &s) {
-    vector<string> res;
-    if (t.ConvertWord(s,&res))
-      return res;
-    return {};
-  }
 
   static const luaL_Reg funcs[] = {
     {"Opencc",WRAP(make)},
@@ -1682,10 +1676,10 @@ namespace OpenccReg {
   };
 
   static const luaL_Reg methods[] = {
-    {"convert_word", WRAP(convert_word)},
+    {"convert_word", WRAPMEM(T, convert_word)},
     {"random_convert_text", WRAPMEM(T,random_convert_text)},
     {"convert_text", WRAPMEM(T,convert_text)},
-    {"convert", WRAPMEM(T,convert_text)},
+    {"convert", WRAPMEM(T,convert_text)}, // old method name
     { NULL, NULL },
   };
 

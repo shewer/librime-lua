@@ -326,10 +326,13 @@ namespace TranslationReg {
   static const luaL_Reg methods[] = {
     { "iter", raw_iter },
     { "append", raw_append },
+    { "Next", WRAPMEM(T,Next) },
+    { "Peek", WRAPMEM(T,Peek) },
     { NULL, NULL },
   };
 
   static const luaL_Reg vars_get[] = {
+    { "exhausted", WRAPMEM(T, exhausted) },
     { "type", WRAP(dynamic_type) },
     { NULL, NULL },
   };

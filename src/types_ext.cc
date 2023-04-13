@@ -240,7 +240,7 @@ namespace UserDbReg{
   typedef Db T;
   typedef DbAccessor A;
 
-  an<T> make(const string& db_name, const string& db_class)
+  an<T> make(const string& db_name, const string& db_class) {
     if (auto comp= UserDb::Require(db_class)){
       return an<T>( comp->Create(db_name)) ;
     }
@@ -249,7 +249,7 @@ namespace UserDbReg{
     }
   }
 
-  an<T> make_leveldb(const string& db_name){
+  an<T> make_leveldb(const string& db_name) {
     return make(db_name, "userdb");
   }
   
@@ -257,7 +257,7 @@ namespace UserDbReg{
     return make(db_name, "plain_userdb");
   }
   
-  optional<string> fetch(an<T> t, const string& key){
+  optional<string> fetch(an<T> t, const string& key) {
     string res;
     if ( t->Fetch(key,&res) )
       return res;
@@ -268,7 +268,7 @@ namespace UserDbReg{
   bool Close(T &t) { return t.Close(); }
   bool OpenReadOnly(T &t) { return t.OpenReadOnly(); }
   bool Erase(T &t, const string &key) { return t.Erase(key); }
-  bool Update(T &t, const string &key, const string &value){
+  bool Update(T &t, const string &key, const string &value) {
     return t.Update(key, value);
   }
 

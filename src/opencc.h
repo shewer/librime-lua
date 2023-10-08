@@ -17,7 +17,6 @@
 #include <opencc/DictEntry.hpp>
 #include <opencc/Common.hpp>
 
-#define CONV(utf8str) (fs::path{utf8str})
 #if _MSC_VER
   // macro CONV( string of utf8) u use
   #if __cplusplus >= 201703L || _MSVC_LANG >= 201703L

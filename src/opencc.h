@@ -26,7 +26,7 @@
      #include <boost/filesystem.hpp>
      using namespace ns = boost::filesystem;
   #endif// __cplusplus
-  #define CONV(utf8str) (opencc::UTF8UTIL::U16ToU8(ns::path(utf8str).wstring()))
+  #define CONV(utf8str) (opencc::UTF8Util::U16ToU8(ns::path(utf8str).wstring()))
 #else
   #define CONV(utf8str) (utf8str)
 #endif// _MSC_VER

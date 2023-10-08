@@ -17,16 +17,18 @@
 #include <opencc/DictEntry.hpp>
 #include <opencc/Common.hpp>
 
+#define CONV(utf8str) (fs::path{utf8str})
 #if _MSC_VER
   // macro CONV( string of utf8) u use
   #if __cplusplus >= 201703L || _MSVC_LANG >= 201703L
      #include <filesystem>
-     using namespace ns = std::filesystem;
+     namespace fs = std::filesystem;
   #else
      #include <boost/filesystem.hpp>
-     using namespace ns = boost::filesystem;
+     namespace fs = boost::filesystem;
   #endif// __cplusplus
-  #define CONV(utf8str) (opencc::UTF8Util::U16ToU8(ns::path(utf8str).wstring()))
+  #define CONV(utf8str) (opencc::UTF8Util::U16ToU8(\
+        (fs::path{utf8str}).wstring()))
 #else
   #define CONV(utf8str) (utf8str)
 #endif// _MSC_VER

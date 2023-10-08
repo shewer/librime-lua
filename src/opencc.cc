@@ -1,23 +1,18 @@
-// Copyright RIME Developers 
+// Copyright RIME Developers
 // Distributed under the BSD License
 // from: <librime/src/rime/gear/simplifier.cc>
 // 2011-12-12 GONG Chen <chen.sst@gmail.com>
-// 
+//
 
 
-#include <opencc/Exception.hpp>
-#include <opencc/Config.hpp> // Place OpenCC #includes here to avoid VS2015 compilation errors
-#include <opencc/Converter.hpp>
-#include <opencc/Conversion.hpp>
-#include <opencc/ConversionChain.hpp>
-#include <opencc/Dict.hpp>
-#include <opencc/DictEntry.hpp>
-#include <opencc/Common.hpp>
 #include <rime_api.h>
 #include <rime/common.h>
 
 #include "lib/lua_export_type.h"
 #include "lib/luatype_boost_optional.h"
+
+// include CONV(utf8str) retun (_MSC_VER) ?  convert(utf8str) : utf8str
+#include "opencc.h"
 
 using std::string;
 using std::vector;
@@ -46,7 +41,7 @@ private:
 
 Opencc::Opencc(const string& config_path) {
   opencc::Config config;
-  converter_ = config.NewFromFile(config_path);
+  converter_ = config.NewFromFile(CONV(config_path));
   const list<opencc::ConversionPtr> conversions =
     converter_->GetConversionChain()->GetConversions();
   dict_ = conversions.front()->GetDict();

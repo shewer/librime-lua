@@ -120,17 +120,9 @@ namespace TableTranslatorReg {
   }
 
   void T::set_enable_encoder(bool enable) {
-    if (enable && !user_dict_) {
-      LOG(WARNING) << "enable encoder failed: user_dict doesn't open";
-      enable_encoder_ = false;
-      encoder_.reset();
-      return;
-    }
-    enable_encoder_ = enable;
-    if (enable && !encoder_)
+    if ((enable_encoder_ = enable && user_dict_ && !encoder_)) {
       init_encoder();
-    else if (!enable)
-      encoder_.reset();
+    }
   }
   // enable sentence contextual
   bool T::init_poet() {
@@ -144,20 +136,17 @@ namespace TableTranslatorReg {
   }
 
   void T::set_enable_sentence(bool enable) {
-    enable_sentence_ = enable;
-    if (enable && !poet_)
+    if ((enable_sentence_ = enable && !poet_))
       init_poet();
   }
 
   void T::set_sentence_over_completion(bool enable) {
-    sentence_over_completion_ = enable;
-    if (enable && !poet_ )
+    if ((sentence_over_completion_ = enable && !poet_ ))
       init_poet();
   }
 
   void T::set_contextual_suggestions(bool enable) {
-    contextual_suggestions_ = enable;
-    if (enable && !poet_)
+    if ((contextual_suggestions_ = enable && !poet_))
       init_poet();
   }
   bool T::reload_user_dict_disabling_patterns(an<ConfigList> cl) {

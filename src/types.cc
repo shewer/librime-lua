@@ -250,7 +250,7 @@ namespace CandidateReg {
       const string& type, const string& text, const string& comment,
       const bool inherit_comment)
   {
-    return New<ShadowCandidate>(item, type, text, comment, inherit_comment);
+    return New<ShadowCandidate>(item, type, text, comment);
   }
 
   int raw_shadow_candidate(lua_State* L) {
@@ -1636,12 +1636,10 @@ namespace CommitEntryReg {
     if (!user_dict || !user_dict->loaded())
       return false;
 
-    bool result = true;
     for (const DictEntry* e : t.elements) {
-      if (!user_dict->UpdateEntry(*e, commit))
-        result = false;
+      user_dict->UpdateEntry(*e, commit);
     }
-    return result;
+    return true;
   }
 
   static const luaL_Reg funcs[] = {
@@ -2028,7 +2026,7 @@ namespace MemoryReg {
       if (auto c = std::dynamic_pointer_cast<Sentence>(cand)) {
         if (*language_ == *c->language()) {
           for (auto entry : c->components()) {
-            res |= user_dict()->UpdateEntry(entry, commits);
+            res |= user_dict()->UpdateEntry(c->entry(), commits);
           }//components
         }
       }
